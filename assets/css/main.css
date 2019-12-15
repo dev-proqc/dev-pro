@@ -548,7 +548,7 @@ hr {
 
 .navbar {
   padding: 0;
-  color: #34363a;
+  background-color: #34363a;
 }
 
 .navbar li.active a.nav-link {
