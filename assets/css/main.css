@@ -548,6 +548,7 @@ hr {
 
 .navbar {
   padding: 0;
+  color: #34363a;
 }
 
 .navbar li.active a.nav-link {
@@ -555,7 +556,7 @@ hr {
 }
 
 .menu-white .navbar-nav .nav-link {
-  color: #34363a;
+  color: #fff;
 }
 
 .dropdown-toggle::after {
