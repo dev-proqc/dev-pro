@@ -171,7 +171,7 @@ nav {
 }
 
 a.homer {
-    background: #9ca3da;
+    background: #3d60f4;
 }
 
 @media (min-width: 768px) and (max-width: 979px) {
@@ -222,7 +222,7 @@ a.homer {
     }
 
     .menu li a:hover,.menu li:hover>a {
-        background: #9ca3da;
+        background: #3d60f4;
         color: #fff;
     }
 
