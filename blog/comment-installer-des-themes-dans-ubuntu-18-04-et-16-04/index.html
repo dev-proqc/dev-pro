@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fr-CA" class="no-js"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><script>(function(html){html.className = html.className.replace(/\bno-js\b/,'js')})(document.documentElement);</script><title>Comment installer des thèmes dans Ubuntu 18.04 et 16.04 – Dev-Pro Informatique</title><link rel="dns-prefetch" href="//fonts.googleapis.com"><link rel="dns-prefetch" href="//s.w.org"><link rel="stylesheet" id="wp-block-library-css" href="https://dev-pro.xyz/blog/wp-includes/css/dist/block-library/style.min.css" type="text/css" media="all"><link rel="stylesheet" id="serenity-lite-bootstrap-css" href="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/css/bootstrap.min.css" type="text/css" media="all"><link rel="stylesheet" id="serenity-lite-bootstrap-grid-css" href="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/css/bootstrap-grid.min.css" type="text/css" media="all"><link rel="stylesheet" id="serenity-lite-multicolumnsrow-css" href="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/css/multi-columns-row.css" type="text/css" media="all"><link rel="stylesheet" id="serenity-lite-slick-css" href="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/css/slick.css" type="text/css" media="all"><link rel="stylesheet" id="serenity-lite-slick-theme-css" href="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/css/slick-theme.css" type="text/css" media="all"><link rel="stylesheet" id="serenity-lite-fontawesome-css" href="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/css/font-awesome.min.css" type="text/css" media="all"><link rel="stylesheet" id="serenity-lite-googlefonts-css" href="https://fonts.googleapis.com/css?family=Rubik%3A100%2C300%2C400%2C500%2C600%2C700%2C800%7CLato%3A100%2C300%2C400%2C500%2C600%2C700%2C800%7CPoppins%3A100%2C300%2C400%2C500%2C600%2C700%2C800&ver=5.3.2" type="text/css" media="all"><link rel="stylesheet" id="serenity-lite-base-css" href="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/style.css" type="text/css" media="all"><script type="text/javascript" src="https://dev-pro.xyz/blog/wp-includes/js/jquery/jquery.js"></script><script type="text/javascript" src="https://dev-pro.xyz/blog/wp-includes/js/jquery/jquery-migrate.min.js"></script><style id="custom-logo-css" type="text/css">
+			.site-title, .site-description {
+				position: absolute;
+				clip: rect(1px, 1px, 1px, 1px);
+			}
+		</style><style type="text/css">
+        body .container {max-width: ;}
+        section.hero {
+            background: url(https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/images/bg-hero.jpg) no-repeat center top;
+            background-size: cover;
+        }
+        section.contact {background-color: #291734;}
+        section.testimonials {background-color: #ea3d56;}
+        section.newsletter {background-color: #ecf2ff;}
+        section.calltoaction {
+            background: url(https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/images/bg-cta.jpg) no-repeat center top;
+            background-size: cover;
+        }
+        section.calltoaction .blacklayer {
+            background-color: #2F5BE7;
+            opacity: 0.95;
+        }
+        .page-footer {background-color: #303030;}
+    </style><style type="text/css">.recentcomments a{display:inline !important;padding:0 !important;margin:0 !important;}</style><style type="text/css" id="wp-custom-css">
+			a {color:#94c045;}
+.btn-primary {background-color:#94c045;border-color:#94c045;}		</style></head><body class="post-template-default single single-post postid-78 single-format-standard wp-custom-logo">
+
+    <div class="body-wrap fullwidth-container">
+
+        <nav class="navbar navbar-light bg-white border-bottom navbar-expand-lg justify-content-between px-5 py-4 fullwidth-container"><div class="navbar-brand py-0 mb-0">
+                    
+                    <a href="https://dev-pro.xyz/blog/" class="custom-logo-link" rel="home"><img width="132" height="29" src="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/logo.png" class="custom-logo" alt="Dev-Pro Informatique"></a>
+                    
+                    <a href="https://dev-pro.xyz/blog/" title="Dev-Pro Informatique" rel="home" class="site-title text-dark">Dev-Pro Informatique</a>
+
+                </div>
+
+                <span class="navbar-text site-description text-info small d-none d-md-block">Solution Technologique</span>
+
+            
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-content" aria-controls="navbar-content" aria-expanded="false" aria-label="Toggle Navigation"><span class="navbar-toggler-icon"></span></button>
+
+                <div class="collapse navbar-collapse" id="navbar-content">
+                    
+                    <ul id="primary-menu" class="navbar-nav ml-auto"><li id="menu-item-62" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-62 nav-item"><a href="https://dev-pro.xyz/blog/acceuil/" class="nav-link">Accueil</a></li>
+<li id="menu-item-63" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children menu-item-63 nav-item dropdown"><a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" id="navbar-dropdown-menu-link-63" aria-haspopup="true" aria-expanded="false">Android</a>
+<div class="sub-menu dropdown-menu" aria-labelledby="navbar-dropdown-menu-link-63">
+<a href="https://dev-pro.xyz/blog/category/android/actualite-android/" class="dropdown-item" id="menu-item-64">Actualité</a><a href="https://dev-pro.xyz/blog/category/android/tutoriel-android/" class="dropdown-item" id="menu-item-65">Tutoriel</a></div>
+</li>
+<li id="menu-item-66" class="menu-item menu-item-type-taxonomy menu-item-object-category current-post-ancestor current-menu-parent current-post-parent menu-item-has-children menu-item-66 nav-item active dropdown"><a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" id="navbar-dropdown-menu-link-66" aria-haspopup="true" aria-expanded="false">Linux</a>
+<div class="sub-menu dropdown-menu" aria-labelledby="navbar-dropdown-menu-link-66">
+<a href="https://dev-pro.xyz/blog/category/linux/actualite-linux/" class="dropdown-item" id="menu-item-71">Actualité</a><a href="https://dev-pro.xyz/blog/category/linux/ubuntu/" class="dropdown-item" id="menu-item-68">Ubuntu</a>
+	<div class="sub-menu dropdown-menu" aria-labelledby="navbar-dropdown-menu-link-68">
+<a href="https://dev-pro.xyz/blog/category/linux/ubuntu/actualite-ubuntu/" class="dropdown-item" id="menu-item-72">Actualité</a><a href="https://dev-pro.xyz/blog/category/linux/ubuntu/tutoriel-ubuntu/" class="dropdown-item" id="menu-item-70">Tutoriel</a>	</div>
+</div>
+</li>
+<li id="menu-item-73" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children menu-item-73 nav-item dropdown"><a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" id="navbar-dropdown-menu-link-73" aria-haspopup="true" aria-expanded="false">Microsoft</a>
+<div class="sub-menu dropdown-menu" aria-labelledby="navbar-dropdown-menu-link-73">
+<a href="https://dev-pro.xyz/blog/category/microsoft/actualite/" class="dropdown-item" id="menu-item-74">Actualité</a><a href="https://dev-pro.xyz/blog/category/microsoft/tutoriel/" class="dropdown-item" id="menu-item-75">Tutoriel</a></div>
+</li>
+</ul></div>
+
+            
+        </nav><div class="container my-lg-5 my-sm-3">
+
+	<div class="row">
+
+		<div class="col-md-12 col-lg-8">
+        
+			<div class="content my-5">
+				
+						
+                <article id="post-78" class="mb-5 post-78 post type-post status-publish format-standard has-post-thumbnail hentry category-linux category-tutoriel-ubuntu category-ubuntu"><p class="text-uppercase mb-1"><a href="https://dev-pro.xyz/blog/category/linux/" rel="category tag">Linux</a>, <a href="https://dev-pro.xyz/blog/category/linux/ubuntu/tutoriel-ubuntu/" rel="category tag">Tutoriel</a>, <a href="https://dev-pro.xyz/blog/category/linux/ubuntu/" rel="category tag">Ubuntu</a></p>
+	                
+	                <h2 class="entry-title"><a href="https://dev-pro.xyz/blog/comment-installer-des-themes-dans-ubuntu-18-04-et-16-04/" rel="bookmark">Comment installer des thèmes dans Ubuntu 18.04 et 16.04</a></h2>
+	                
+	                <p class="meta text-muted text-info small">
+	                    
+	                    By <a href="https://dev-pro.xyz/blog/author/siz/">siz</a> on décembre 25, 2019
+						<span>•</span>
+
+						0 Comments
+							                
+	                </p>
+
+	                
+	                	<figure class="post-image"><a href="https://dev-pro.xyz/blog/comment-installer-des-themes-dans-ubuntu-18-04-et-16-04/"><img width="1000" height="600" src="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu18-1000x600.png" class="img-fluid rounded wp-post-image" alt=""></a>
+
+	                	</figure><div class="clearfix"></div>
+
+                    <div class="entry">
+                    
+                      <h1><a href="https://dev-pro.xyz/blog/linux/ubuntu/comment-installer-des-themes-dans-ubuntu.html#">Comment installer des thèmes dans Ubuntu 18.04 et 16.04</a></h1>
+<p><img class="alignnone size-medium wp-image-80 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/ubuntu18-300x169.png" alt="" width="300" height="169" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu18-300x169.png 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu18-1024x576.png 1024w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu18-768x432.png 768w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu18-1536x864.png 1536w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu18.png 1920w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p><strong>Ce guide du débutant vous montre comment installer des thèmes dans Ubuntu 18.04 et 16.04. Le didacticiel couvre l’installation des thèmes d’icônes, des thèmes GTK et des thèmes GNOME Shell.</strong></p>
+<p>Ubuntu 18.04 récemment sorti semble bon, mais il peut être modifié pour mieux paraître. L’une des raisons pour lesquelles j’aime utiliser Linux est la flexibilité de la personnalisation. Changer de thème donne au système une toute nouvelle apparence.</p>
+<p>Et la meilleure chose est qu’il y a des tonnes de bons thèmes pour Ubuntu et autres distributions Linux à votre disposition. Vous pouvez jouer avec eux à votre guise.</p>
+<p>Dans ce didacticiel, je vais vous montrer différents types de personnalisation de thème, les façons de les installer. Bien sûr, je vais discuter de la façon de changer les thèmes dans Ubuntu.</p>
+<p>Commençons maintenant.</p>
+<h2>Connaître la différence entre les thèmes d’icônes, les thèmes GTK et les thèmes GNOME Shell</h2>
+<p>C’est l’apparence par défaut d’Ubuntu 17.10:</p>
+<p><img class="alignnone size-medium wp-image-86 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/ubuntu-17-10-300x169.jpeg" alt="" width="300" height="169" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu-17-10-300x169.jpeg 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu-17-10-768x432.jpeg 768w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu-17-10.jpeg 800w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p>Et si je change les trois éléments du thème, la même chose peut ressembler à ceci:</p>
+<p> </p>
+<p><img class="alignnone size-medium wp-image-87 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/ubuntu-17-10-changer-le-theme-300x169.jpeg" alt="" width="300" height="169" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu-17-10-changer-le-theme-300x169.jpeg 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu-17-10-changer-le-theme-768x432.jpeg 768w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/ubuntu-17-10-changer-le-theme.jpeg 800w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p><strong>Icônes:</strong> les icônes sont assez simples. Changer le thème des icônes changera l’apparence des icônes des applications. Vous devriez opter pour un thème d’icônes qui prend en charge un large éventail d’applications, sinon vous pourriez voir certaines icônes rester inchangées et être hors de l’écran.</p>
+<p><strong>Thème GTK:</strong> GTK est un framework utilisé pour construire l’interface utilisateur graphique d’une application. Fondamentalement, il détermine à quoi ressemblera une interface d’application (s’il s’agit d’une application GTK). À l’heure actuelle, Ubuntu utilise GTK3, vous devez donc télécharger les thèmes GTK3.</p>
+<p><strong>Thème GNOME Shell:</strong> Changer le thème GNOME Shell changera les éléments Shell tels que le panneau supérieur, l’aperçu des activités, la notification du bureau, etc.</p>
+<p>Certains packages de thèmes fournissent les trois types d’éléments de thème pour vous offrir une expérience uniforme. D’autre part, vous trouverez également une icône autonome ou des thèmes GTK ou Shell. Bien sûr, vous pouvez les combiner pour donner à votre système Ubuntu un aspect attrayant.</p>
+<p>Maintenant que vous connaissez les termes, procédons à l’installation des thèmes dans Ubuntu 18.04, 18.10 et 16.04.</p>
+<p> </p>
+<h1>Comment installer des thèmes dans Ubuntu 18.04 et 16.04</h1>
+<p> </p>
+<p><strong>Pour information, j’utiliserai le terme «thèmes» pour les trois thèmes, c’est-à-dire les icônes, les thèmes GTK et GNOME Shell, sauf indication contraire.</strong>Il existe trois façons principales d’installer des thèmes dans Ubuntu:</p>
+<p>Il existe trois façons principales d’installer des thèmes dans Ubuntu:</p>
+<h3>1. Utilisation de PPA pour installer des thèmes</h3>
+<p>Ma façon préférée d’installer des thèmes est d’utiliser un PPA. De cette façon, vous obtenez les thèmes mis à jour automatiquement. Tout ce que vous avez à faire est d’utiliser trois lignes de code, une par une.</p>
+<p>Prenons par exemple le thème Pop OS. Il s’agit d’un magnifique package de thème développé par System76 pour sa propre distribution Pop OS Linux. Vous pouvez installer le package de thème à l’aide de la commande ci-dessous:</p>
+<p><code>sudo add-apt-repository ppa:system76/pop</code></p>
+<p><code>sudo apt-get update</code></p>
+<p><code>sudo apt-get install pop-theme</code></p>
+<p>Cela installera l’icône Pop OS, GTK3 et le thème GNOME Shell. Vous n’avez rien d’autre à faire. Vous avez maintenant les nouveaux thèmes disponibles dans votre système. Il vous suffit de le changer. Nous verrons comment changer les thèmes dans Ubuntu un peu plus loin dans cet article. Passons à d’autres façons d’installer des thèmes.</p>
+<h3>2. Using .deb packages to install themes</h3>
+<p>Certains développeurs de thèmes fournissent un exécutable .deb pour leur thème. Il vous suffit de télécharger le package .deb et de double-cliquer dessus pour installer le thème comme n’importe quel autre logiciel. Prenez le thème de l’icône Masalla par exemple. Vous pouvez télécharger les fichiers .deb depuis SourceForge.</p>
+<p><a href="https://sourceforge.net/projects/masalla-icon-theme/files/debian-files/masalla-colors_1.1_all.deb/download" target="_blank" rel="noopener noreferrer">Télécharger Masalla Icon Theme</a></p>
+<p>Une fois téléchargé, il suffit de double-cliquer dessus pour installer le thème.</p>
+<h3>3. Utilisation de fichiers d’archive pour installer des thèmes</h3>
+<p>C’est peut-être la façon la plus courante de proposer des thèmes. Si vous allez sur le site Web GNOME Looks à la recherche de thèmes, vous constaterez que les thèmes se présentent sous forme d’archive zip ou tar. Ne vous inquiétez pas, l’installation de thèmes de cette façon n’est pas un gros problème.</p>
+<p>Téléchargez le thème Ant GTK à partir du lien ci-dessous. Vous devrez vous rendre dans la section Fichiers. Si vous voyez plusieurs fichiers, c’est parce que ce thème a des variantes. Ces variantes sont similaires mais varient un peu en termes de look. Par exemple, il pourrait y avoir une variante sombre d’un thème.</p>
+<p><a href="https://www.gnome-look.org/p/1099856/" target="blank" rel="noopener noreferrer">Télécharger Ant Theme</a></p>
+<p>Une fois que vous l’avez téléchargé, vous devrez faire un truc supplémentaire ici.</p>
+<p>Accédez à votre répertoire d’accueil et appuyez sur Ctrl + H pour afficher les fichiers et dossiers cachés. Si vous voyez les dossiers .themes et .icons, vous êtes bon. Sinon, créez de nouveaux dossiers nommés .themes et .icons.</p>
+<p>Vous pouvez utiliser la commande ci-dessous si vous le souhaitez:</p>
+<p><code>mkdir ~/.themes</code></p>
+<p><code>mkdir ~/.icons</code></p>
+<p>N’oubliez pas que lorsque vous téléchargez la version archivée du thème GTK ou GNOME Shell, extrayez-la et copiez le dossier extrait dans le dossier .themes de votre répertoire personnel. Si vous téléchargez une version archivée du thème d’icônes, extrayez-la et copiez le dossier extrait dans le dossier .icons de votre répertoire personnel.</p>
+<p><strong>Pour résumer:</strong></p>
+<p><strong>.themes </strong></p>
+<ul>– for GTK and GNOME Shell themes</ul><p><strong>.icons </strong></p>
+<ul>– pour les thèmes d’icônes</ul><p>Eh bien, vous venez d’apprendre à installer des thèmes dans Ubuntu 17.10. Il est temps de voir comment changer les thèmes ici.</p>
+<h1>Comment changer les thèmes dans Ubuntu 18.04 [Bureau GNOME]</h1>
+<p>Vous devrez utiliser l’outil GNOME Tweaks à cet effet. Il est disponible dans le centre logiciel. Recherchez-le et installez-le.</p>
+<p>Si vous préférez le terminal, vous pouvez utiliser la commande ci-dessous pour installer GNOME Tweaks:</p>
+<p><code>sudo apt install gnome-tweaks</code></p>
+<p>Une fois installé, recherchez-le et démarrez-le</p>
+<p> </p>
+<p><img class="alignnone size-medium wp-image-85 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/gnome-tweaks-ubuntu-17-10-300x91.jpeg" alt="" width="300" height="91" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/gnome-tweaks-ubuntu-17-10-300x91.jpeg 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/gnome-tweaks-ubuntu-17-10-768x233.jpeg 768w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/gnome-tweaks-ubuntu-17-10.jpeg 800w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p>Lorsque vous démarrez Tweaks, vous verrez les options pour modifier l’icône, GTK3 et le thème Shell sous la section Apparence. Le thème GTK est modifié à partir de l’option « Applications ».</p>
+<p> </p>
+<p><img class="alignnone size-medium wp-image-81 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/change-theme-ubuntu-17-10-300x215.jpeg" alt="" width="300" height="215" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/change-theme-ubuntu-17-10-300x215.jpeg 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/change-theme-ubuntu-17-10-768x549.jpeg 768w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/change-theme-ubuntu-17-10.jpeg 800w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p><strong>Problème:</strong></p>
+<p>Vous verrez peut-être un triangle sur l’option GNOME Shell qui ne vous permettra pas de changer le thème du GNOME Shell.</p>
+<p> </p>
+<p><img class="alignnone size-medium wp-image-82 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/changing-gnome-shell-theme-300x215.jpeg" alt="" width="300" height="215" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/changing-gnome-shell-theme-300x215.jpeg 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/changing-gnome-shell-theme-768x549.jpeg 768w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/changing-gnome-shell-theme.jpeg 800w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p>Cela est dû au fait que certaines fonctionnalités de GNOME Shell sont verrouillées par défaut. Ils peuvent être modifiés à l’aide des extensions GNOME Shell. Bien qu’il existe de nombreuses extensions de shell GNOME disponibles, le moyen le plus fiable consiste à utiliser les extensions de shell GNOME incluses dans le référentiel d’Ubuntu. Il s’agit de 8 à 10 extensions utiles, dont celle qui vous permettra de changer le thème du shell GNOME.</p>
+<p><strong>Pour l’installer, vous devrez utiliser le terminal ici. Il n’y a pas d’autre moyen:</strong></p>
+<p><code>sudo apt install gnome-shell-extensions</code></p>
+<p>À ce stade, je ne me souviens pas si vous devez vous déconnecter ou redémarrer votre système. Si vous allez sous l’option Extensions dans GNOME Tweaks et que vous ne voyez pas un tas d’extensions là-bas, vous devez vous déconnecter et vous reconnecter.</p>
+<p> </p>
+<p><img class="alignnone size-medium wp-image-84 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/enableuser-themes-extension-gnome-300x215.jpeg" alt="" width="300" height="215" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/enableuser-themes-extension-gnome-300x215.jpeg 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/enableuser-themes-extension-gnome-768x549.jpeg 768w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/enableuser-themes-extension-gnome.jpeg 800w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p>Ce que vous devez faire ici est d’activer l’extension GNOME Shell « Thèmes utilisateur ». Après cela, redémarrez l’application GNOME Tweaks. Maintenant, vous verrez que le triangle a disparu et vous pouvez changer le shell GNOME.</p>
+<h1>Comment changer les thèmes dans Ubuntu 16.04 [Unity desktop]</h1>
+<p>Vous pouvez installer l’outil Unity Tweak depuis Ubuntu Software Center.</p>
+<p>Alternativement, vous pouvez également utiliser le terminal et l’installer avec la commande suivante:</p>
+<p><code>sudo apt-get install unity-tweak-tool</code></p>
+<p>Une fois que vous avez installé le thème ou extrait le contenu dans le répertoire ~ / .themes, démarrez Unity Tweak Tool. Accédez à Unity Dash et recherchez l’outil Unity Tweak:</p>
+<p> </p>
+<p><img class="alignnone size-medium wp-image-89 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/Unity-Tweak-Tool-300x128.jpeg" alt="" width="300" height="128" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/Unity-Tweak-Tool-300x128.jpeg 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/Unity-Tweak-Tool.jpeg 700w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p>Vous trouverez l’option Thème dans la section Apparence.</p>
+<p> </p>
+<p><img class="alignnone size-medium wp-image-88 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/Ubuntu-Unity-Tweak-Tool-300x282.jpeg" alt="" width="300" height="282" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/Ubuntu-Unity-Tweak-Tool-300x282.jpeg 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/Ubuntu-Unity-Tweak-Tool.jpeg 500w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p>Une fois que vous avez sélectionné l’option Thèmes, vous trouverez ici tous les thèmes présents dans le système. Cliquez simplement sur celui que vous aimez. Il sera modifié instantanément.</p>
+<p>Si vous le souhaitez, vous pouvez choisir de modifier les icônes uniquement à partir de l’onglet Icône. Je préfère conserver les icônes par défaut fournies avec le thème.</p>
+<p><img class="alignnone size-medium wp-image-83 img-fluid" src="http://127.0.0.1:8080/wordpress/wp-content/uploads/2019/12/Chnage-Theme-Ubuntu-300x154.png" alt="" width="300" height="154" srcset="https://dev-pro.xyz/blog/wp-content/uploads/2019/12/Chnage-Theme-Ubuntu-300x154.png 300w,https://dev-pro.xyz/blog/wp-content/uploads/2019/12/Chnage-Theme-Ubuntu.png 683w" sizes="(max-width: 300px) 100vw, 300px"></p>
+<p> </p>
+<p>Voilà</p>
+                    
+                    </div>
+            
+                    <div class="clearfix"></div>
+            
+                </article><div id="comments" class="comments-area border-top mt-5 pt-5">
+
+	<div id="collapseOne">
+
+		
+		<ol class="comment-list"></ol></div>
+
+	<div id="collapseTwo">
+
+			<div id="respond" class="comment-respond">
+		<h3 id="reply-title" class="comment-reply-title">Leave a comment <small><a rel="nofollow" id="cancel-comment-reply-link" href="/wordpress/comment-installer-des-themes-dans-ubuntu-18-04-et-16-04/#respond" style="display:none;"><button class="btn btn-link float-right"><i class="fas fa-times"></i></button></a></small></h3><form action="https://dev-pro.xyz/blog/wp-comments-post.php" method="post" id="commentform" class="comment-form"><p class="comment-notes"><span id="email-notes">Votre adresse courriel ne sera pas publiée.</span> Les champs obligatoires sont indiqués avec <span class="required">*</span></p><p class="comment-form-comment"><label for="comment">Comment<span class="required">*</span></label> <textarea class="form-control" id="comment" name="comment" cols="35" rows="8" aria-required="true" required></textarea></p><p class="comment-form-author"><label for="author">Name<span class="required">*</span></label> <input class="form-control input-lg input-comment-author" id="author" name="author" type="text" value="" size="30" aria-required="true" required></p>
+<p class="comment-form-email"><label for="email">Email<span class="required">*</span></label> <input class="form-control input-lg input-comment-email" id="email" name="email" type="email" value="" size="30" aria-required="true" required></p>
+<p class="comment-form-website"><label for="website">Website</label> <input class="form-control input-lg input-comment-website" id="website" name="website" type="website" value="" size="30"></p>
+<p class="comment-form-cookies-consent"><input id="wp-comment-cookies-consent" name="wp-comment-cookies-consent" type="checkbox" value="yes"><label for="wp-comment-cookies-consent">Enregistrer mon nom, courriel et site web dans le navigateur pour la prochaine fois que je commenterai.</label></p>
+<p class="form-submit"><input name="submit" type="submit" id="submit" class="btn btn-lg btn-block btn-primary mt-4" value="Post Comment"><input type="hidden" name="comment_post_ID" value="78" id="comment_post_ID"><input type="hidden" name="comment_parent" id="comment_parent" value="0"></p></form>	</div>
+	
+	</div>
+
+</div>
+			
+			</div>
+
+		</div>
+
+		
+
+<div class="col-md-12 col-lg-3 ml-auto">
+			
+    <div class="sidebar my-5">
+		
+		<aside id="search-2" class="widget widget_search mb-5"><form method="get" id="searchform" action="https://dev-pro.xyz/blog/" role="search">
+	
+	<label for="s" class="screen-reader-text">Search</label>
+	
+	<div class="input-group input-group-lg">
+	
+		<input type="text" class="form-control" name="s" id="s" placeholder="Enter term …"><div class="input-group-append">
+	
+			<input type="submit" class="submit btn btn-primary" name="submit" id="searchsubmit" value="Search"></div>
+	
+	</div>
+
+</form></aside><aside id="recent-posts-2" class="widget widget_recent_entries mb-5"><h3 class="widget-title mt-0">Articles récents</h3>		<ul><li>
+					<a href="https://dev-pro.xyz/blog/comment-installer-des-themes-dans-ubuntu-18-04-et-16-04/" aria-current="page">Comment installer des thèmes dans Ubuntu 18.04 et 16.04</a>
+									</li>
+					</ul></aside><aside id="recent-comments-2" class="widget widget_recent_comments mb-5"><h3 class="widget-title mt-0">Commentaires récents</h3><ul id="recentcomments"></ul></aside></div>
+
+</div>
+
+
+	</div>
+    
+</div>
+
+            <footer class="page-footer text-light"><div class="container">
+
+                  <div class="row">
+
+                    <div class="col-md-12">
+
+                      
+                      <div class="social-icons my-5 py-7 d-flex justify-content-center">
+
+                        
+                        
+                        
+                        
+                        
+                        
+                      </div>
+                      
+                    </div>
+
+                  </div>
+
+                </div>
+
+                
+                <div class="footer-copyright text-center small bg-dimped__dark py-3">
+
+                    <a class="text-light" href="">© 2019</a>
+
+                    <span class="sep text-light mx-2"> | </span>
+
+                    <a class="text-light" href="https://dev-pro.xyz/">Dev-Pro</a>
+
+                </div>
+
+              </footer></div>
+
+        <script type="text/javascript" src="https://dev-pro.xyz/blog/wp-includes/js/jquery/ui/effect.min.js"></script><script type="text/javascript" src="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/js/bootstrap.bundle.min.js"></script><script type="text/javascript" src="https://dev-pro.xyz/blog/wp-content/themes/serenity-lite/js/slick.min.js"></script></body></html>
