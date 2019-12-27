@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+<channel>
+	<title>Technologie &#8211; Dev-Pro Informatique</title>
+	<atom:link href="http://localhost/wordpress/category/technologie/feed/" rel="self" type="application/rss+xml" />
+	<link>http://dev-pro.xyz/blog/</link>
+	<description>Solution Technologique</description>
+	<lastBuildDate>Fri, 27 Dec 2019 15:50:34 +0000</lastBuildDate>
+	<language>fr-CA</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	<generator>https://wordpress.org/?v=5.3.2</generator>
+	<item>
+		<title>FlameGraph</title>
+		<link>https://dev-pro.xyz/blog/flamegraph/</link>
+				<pubDate>Fri, 27 Dec 2019 15:50:34 +0000</pubDate>
+		<dc:creator><![CDATA[siz]]></dc:creator>
+				<category><![CDATA[debug]]></category>
+		<category><![CDATA[kernel]]></category>
+		<category><![CDATA[Linux]]></category>
+		<category><![CDATA[perf]]></category>
+		<category><![CDATA[Technologie]]></category>
+
+		<guid isPermaLink="false">https://dev-pro.xyz/blog/flamegraph/</guid>
+				<description><![CDATA[Introduction Les outils de profilage permettent lors de l&#8217;ex&#233;cution d&#8217;un logiciel de contr&#244;ler la liste des fonctions appel&#233;es, le temps pass&#233; dans chacune d&#8217;elle, l&#8217;utilisation des ressources processeur ou l&#8217;utilisation m&#233;moire par exemple. Sous Linux une multitude d&#8217;outils sont disponibles et si vous avez d&#233;j&#224; utilis&#233; Perf ou eBPF vous avez sans nul doute remarqu&#233; ... <a href="https://dev-pro.xyz/blog/flamegraph/" class="more-link text-uppercase small"><strong>Continue Reading</strong> <i class="fa fa-angle-double-right" aria-hidden="true"></i></a>]]></description>
+								<content:encoded><![CDATA[<div>
+<h1>Introduction</h1>
+<p> Les outils de profilage permettent lors de l&rsquo;ex&eacute;cution d&rsquo;un logiciel de contr&ocirc;ler la liste des <a href="https://fr.wikipedia.org/wiki/Fonction_informatique">fonctions</a> appel&eacute;es, le temps pass&eacute; dans chacune d&rsquo;elle, l&rsquo;utilisation des ressources <a href="https://fr.wikipedia.org/wiki/Processeur">processeur</a> ou l&rsquo;utilisation <a href="https://fr.wikipedia.org/wiki/M%C3%A9moire_(informatique)">m&eacute;moire</a> par exemple. Sous Linux une multitude d&rsquo;outils sont disponibles et si vous avez d&eacute;j&agrave; utilis&eacute; Perf ou eBPF vous avez sans nul doute remarqu&eacute; que la quantit&eacute; de log g&eacute;n&eacute;r&eacute;e peut rapidement devenir gargantuesque et donc difficilement interpr&eacute;table.</p>
+<p>Cet article va vous pr&eacute;senter les FlameGraph : un outil tr&egrave;s pratique de visualisation des logs d&rsquo;applications profil&eacute;es qui a &eacute;t&eacute; d&eacute;velopp&eacute; par Brendan Gregg, ing&eacute;nieur chez Netflix et sp&eacute;cialiste de l&rsquo;analyse de performance. Les FlameGraph sont une une repr&eacute;sentation des logs de n&rsquo;importe quel outil de g&eacute;n&eacute;ration de donn&eacute;es de profiling comme eBPF et Perf qui sont &eacute;galement des traceurs d&eacute;j&agrave; introduits par les excellents articles de Jugurtha :</p>
+<ul>
+<li><a href="http://www.linuxembedded.fr/2018/12/les-traceurs-sous-linux-1/">http://www.linuxembedded.fr/2018/12/les-traceurs-sous-linux-1/</a>&nbsp;: introduction au tra&ccedil;age et profilage d&rsquo;applications ainsi que le principe de fonctionnement de Ftrace et ses outils front-end.</li>
+<li><a href="http://www.linuxembedded.fr/2019/02/les-traceurs-sous-linux-2/">http://www.linuxembedded.fr/2019/02/les-traceurs-sous-linux-2/</a>&nbsp;: utilisation de perf, avec des exemples de commandes utiles que je vais utiliser dans cet article.</li>
+<li><a href="http://www.linuxembedded.fr/2019/03/les-secrets-du-traceur-ebpf/">http://www.linuxembedded.fr/2019/03/les-secrets-du-traceur-ebpf/</a></li>
+</ul>
+<p>Cet article n&rsquo;est qu&rsquo;un exemple d&rsquo;utilisation des FlameGraph pr&eacute;c&eacute;d&eacute; de quelques notions. Tout le m&eacute;rite revient &eacute;videmment &agrave; Brendan Gregg. Vous pouvez retrouver son blog qui sert de r&eacute;f&eacute;rence aux m&eacute;thodes de profilage, au lien suivant : <a href="http://www.brendangregg.com/overview.html">http://www.brendangregg.com/overview.html</a></p>
+<h2>G&eacute;n&eacute;ration d&rsquo;un FlameGraph on-CPU</h2>
+<p>Une des mani&egrave;res de profiler une application revient &agrave; d&eacute;terminer pourquoi le CPU est occup&eacute;. Une fa&ccedil;on efficace de faire cela est le profilage par &eacute;chantillonnage&nbsp;: on envoie &agrave; une certaine fr&eacute;quence une interruption au CPU pour r&eacute;cup&eacute;rer la stack trace, l&rsquo;adresse en m&eacute;moire de l&rsquo;instruction en cours d&rsquo;ex&eacute;cution (Program Counter) ainsi que l&rsquo;adresse de la fonction. Nous allons dans notre exemple utiliser la commande Perf pour ce faire.</p>
+<p>Vous pouvez installer Perf sur votre distribution via votre gestionnaire de paquet&nbsp;: linux-perf sous debian, perf sous CentOS et Arch, linux-tools sous Ubuntu&hellip; De plus si vous voulez qu&rsquo;un utilisateur non root puisse collecter des donn&eacute;es dans votre terminal courant, il est possible de modifier la valeur de la variable perf_event_paranoid&nbsp;:</p>
+<pre class="wp-block-preformatted"> <strong>echo -1 &gt; /proc/sys/kernel/perf_event_paranoid</strong>.</pre>
+<p>NB : les programmes que vous profilez doivent comporter des symboles de debug n&eacute;cessaires &agrave; la traduction des adresses m&eacute;moire en nom de fonction.</p>
+<p>Si vous voulez profiler une application int&eacute;gr&eacute;e dans votre distribution via Yocto il faut installer la version  &laquo;&nbsp;-dbg&nbsp;&raquo; du paquet que vous souhaitez analyser. Vous pouvez &eacute;galement utiliser l&rsquo;image feature &laquo;&nbsp;dbg-pkgs&nbsp;&raquo; pour cr&eacute;er une version de votre image int&eacute;grant tous les paquets de debug ce qui peut &ecirc;tre utile pour profiler le syst&egrave;me complet.</p>
+<p>Sur Debian pour installer des paquets avec les symboles de debug il faut ajouter la source <strong>deb</strong> <strong>http://debug.mirrors.debian.org/debian-debug/ buster-debug main</strong> (pour debian buster) dans votre source.list d&rsquo;apt. Apr&egrave;s &ccedil;a vous pouvez installer les paquets de debug qui ont en g&eacute;n&eacute;ral comme suffixe -dbgsym.</p>
+<p>Une autre source potentielle de probl&egrave;me peut &ecirc;tre que la stack trace retourn&eacute;e est incompl&egrave;te pour les applications qui sont compil&eacute;es avec des optimisations de compilation. Dans ce cas il faut recompiler l&rsquo;application avec l&rsquo;option <strong>&ndash;</strong><strong>fno-omit-frame-pointer.</strong></p>
+<p>De la m&ecirc;me mani&egrave;re il est possible que la stack trace du kernel soit incompl&egrave;te si l&rsquo;option CONFIG_FRAME_POINTER est d&eacute;sactiv&eacute;e (Kernel hacking/Compile-time-checks and compiler option)</p>
+<p>La proc&eacute;dure pour g&eacute;n&eacute;rer les FlameGraph CPU est tr&egrave;s simple, il suffit dans un premier temps de lancer la commande suivante pour profiler pendant 30 secondes et &agrave; une fr&eacute;quence de 99Hz (99 interruptions par seconde) une application qui a un PID valant 12345 par exemple&nbsp;:</p>
+<pre class="wp-block-preformatted"><strong>perf record -F 99 -p 12345 -g -- sleep 30</strong></pre>
+<p>On peut &eacute;galement profiler le syst&egrave;me complet et donc tous les coeurs de la CPU avec l&rsquo;option -a&nbsp;:</p>
+<pre class="wp-block-preformatted"><strong>perf record -F 99 -a -g -- sleep 30</strong></pre>
+<p>Cela va g&eacute;n&eacute;rer un fichier perf.data qui contient les &eacute;chantillons qui peuvent &ecirc;tre lus via la commande perf report :</p>
+<pre class="wp-block-preformatted"><strong>perf report -n --stdio</strong> </pre>
+<p>Perf est un outil tr&egrave;s puissant mais en lan&ccedil;ant les 2 derni&egrave;res commandes sur ma machine, le rapport g&eacute;n&eacute;r&eacute; fait plus d&rsquo;un millier de lignes. Et c&rsquo;est bien l&agrave; l&rsquo;int&eacute;r&ecirc;t des FlameGraph. Ils sont tr&egrave;s facile &agrave; g&eacute;n&eacute;rer et tr&egrave;s faciles &agrave; interpr&eacute;ter rapidement.</p>
+<p>Dans mon cas j&rsquo;ai g&eacute;n&eacute;r&eacute; mes Flame Graphs sur une cible dont la distribution a &eacute;t&eacute; g&eacute;n&eacute;r&eacute;e via Yocto ; voici une recette tr&egrave;s simple qui va r&eacute;cup&eacute;rer les sources du projet et les installer dans la cible&nbsp;: </p>
+<pre class="wp-block-preformatted">SUMMARY = "Flamegrah Yocto recipe"
+DESCRIPTION = "Flamegraph are a visualization tool for profiled application logs"
+LICENSE = "CLOSED"
+
+S = "${WORKDIR}/git"
+
+SRC_URI = "git://github.com/brendangregg/FlameGraph.git;protocol=https"
+SRCREV = "1b1c6deede9c33c5134c920bdb7a44cc5528e9a7"
+
+RDEPENDS_flamegraph = "perl"
+
+FILES_${PN} += "flamegraph/"
+do_install() {
+     install -d  ${D}/flamegraph
+     install -m  0755 ${S}/*.pl ${D}/flamegraph
+}</pre>
+<p>Vu que rien n&rsquo;est compil&eacute; dans le projet vous pouvez &eacute;galement cloner le projet &agrave; l&rsquo;URI suivant et le copier sur la cible&nbsp;: </p>
+<pre class="wp-block-preformatted"><strong>git clone https://github.com/brendangregg/FlameGraph</strong></pre>
+<p>Le projet consiste en une multitude de scripts perl ainsi que des exemples de FlameGraph d&eacute;j&agrave; g&eacute;n&eacute;r&eacute;s et pr&eacute;sent&eacute;s sur le blog de Brendan Gregg. A partir d&rsquo;un fichier perf.data g&eacute;n&eacute;r&eacute; par <em>perf</em> on peut le copier dans le r&eacute;pertoire du projet et lancer la commande suivante pour g&eacute;n&eacute;rer un flamegraph :</p>
+<pre class="wp-block-preformatted"><strong>perf script | ./stackcollapse-perf.pl &gt; out.perf-folded &amp;&amp; ./flamegraph.pl out.perf-folded &gt; flamegraph.svg</strong> </pre>
+<ul>
+<li>perf script va chercher dans le r&eacute;pertoire local un fichier perf.data (g&eacute;n&eacute;r&eacute; par perf record) et afficher la trace. Attention n&eacute;anmoins cette commande est d&eacute;pendante de l&rsquo;architecture de la plateforme. Il faut donc g&eacute;n&eacute;rer les Flamegraph directement sur la cible.</li>
+<li>stackcollapse-perf va formater la trace en une seule ligne pour qu&rsquo;elle puisse &ecirc;tre trait&eacute;e par le script flamegraph.pl</li>
+<li>flamegraph.pl transforme le fichier out.perf-folded en une image de flamegraph.</li>
+</ul>
+<p>On g&eacute;n&egrave;re donc un fichier SVG qui peut facilement &ecirc;tre ouvert depuis un navigateur. Je vais vous pr&eacute;senter ici un exemple tr&egrave;s simple de FlameGraph issu d&rsquo;un petit programme.</p>
+<p>D&rsquo;une part le programme va dans un premier thread ouvrir un fichier, &eacute;crire dedans, le refermer en boucle et va dans un autre thread lancer une boucle vide qui va faire mouliner le processeur. Si on profile le syst&egrave;me entier pendant 60 secondes et qu&rsquo;on lance pendant cette p&eacute;riode le programme pendant 30 secondes on obtient le r&eacute;sultat suivant&nbsp;:</p>
+<figure class="wp-block-image is-resized"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/flamegraph.svg_-1024x633.png" alt="" class="wp-image-6947 img-fluid" width="827" height="511" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/flamegraph.svg_-1024x633.png 1024w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/flamegraph.svg_-300x186.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/flamegraph.svg_-768x475.png 768w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/flamegraph.svg_.png 1250w" sizes="(max-width: 827px) 100vw, 827px"></figure>
+<p>Interpr&eacute;tation du r&eacute;sultat&nbsp;:</p>
+<ul>
+<li>Chaque boite repr&eacute;sente l&rsquo;appel &agrave; une fonction dans la pile</li>
+<li>L&rsquo;axe des ordonn&eacute;es pr&eacute;sente la profondeur de la pile</li>
+<li>La largeur des frame en abscisse correspond au temps pass&eacute; (nombre d&rsquo;&eacute;chantillons) par un CPU &agrave; ex&eacute;cuter la fonction correspondante.</li>
+</ul>
+<p>Dans notre cas il est tr&egrave;s facile de d&eacute;celer les t&acirc;ches gourmandes en CPU. Pour interpr&eacute;ter un Flame Graph on va chercher les boites larges tout en haut de la pile et voir par quelles fonctions elles ont &eacute;t&eacute; appel&eacute;es. Ici on remarque que la case &laquo;&nbsp;cpu_moulineur&nbsp;&raquo; est extr&ecirc;mement large, c&rsquo;est elle qui correspond &agrave; la fonction contenant une boucle vide.</p>
+<p>Si on positionne le curseur de la souris sur la boite &laquo;&nbsp;cpu_moulineur&nbsp;&raquo;&nbsp;un champ affiche le nombre d&rsquo;&eacute;chantillons (et donc le temps pass&eacute; dans la fonction) ainsi que le pourcentage correspondant par rapport &agrave; la mesure compl&egrave;te.</p>
+<p>Le bloc situ&eacute; &agrave; sa droite correspond &agrave; la fonction qui ouvre et ferme un fichier en boucle. En plus d&rsquo;observer le nombre d&rsquo;&eacute;chantillons pour chaque boite, il est int&eacute;ressant de voir l&rsquo;encha&icirc;nement des fonctions appel&eacute;es de l&rsquo;userspace jusqu&rsquo;aux strates les plus enfouies du kernel.</p>
+<p>Ici l&rsquo;exemple est relativement trivial mais dans un plus gros projet cela peut s&rsquo;av&eacute;rer tr&egrave;s utile car les FlameGraph offrent une vision globale des fonctions appel&eacute;es par une application&nbsp;! On peut voir par exemple si l&rsquo;appel &agrave; une fonction userspace provoque l&rsquo;appel &agrave; un kmalloc c&ocirc;t&eacute; kernel.</p>
+<p>NB&nbsp;: on ne sait n&eacute;anmoins pas &agrave; quel moment les fonctions sont appel&eacute;es car il n&rsquo;y a pas de notion temporelle dans les flamegraph CPU.</p>
+<h1>D&rsquo;autres types de FlameGraph int&eacute;ressants</h1>
+<h2>FlameGraph off-CPU</h2>
+<p>Les FlameGraph on-CPU permettent de comprendre l&rsquo;usage CPU mais ne permettent pas de voir les probl&egrave;mes de latence pr&eacute;sents quand un thread est en attente d&rsquo;une I/O bloqu&eacute;e, d&rsquo;un timer ou quand il y a un changement de contexte. Cela constitue une forme d&rsquo;analyse &agrave; part enti&egrave;re que Brendan Gregg appelle analyse off-CPU (en opposition &agrave; on-CPU).</p>
+<p>En r&eacute;sum&eacute; l&rsquo;analyse off-CPU est un moyen de localiser de la latence introduite par le blocage de thread, cette analyse est compl&eacute;mentaire &agrave; l&rsquo;analyse on-CPU et est n&eacute;cessaire &agrave; la compr&eacute;hension du cycle de vie d&rsquo;un thread.</p>
+<p>Leur g&eacute;n&eacute;ration peut &ecirc;tre r&eacute;alis&eacute;e via le script offcputime de bcc (je vous renvoie vers l&rsquo;article de Jugurtha) qui permet de trouver pourquoi et pendant combien de temps un thread est bloqu&eacute; et ce quelque soit le type de blocage.</p>
+<p>Une approche est de tracer les appels aux fonctions malloc et free et afficher sur un Flame Graph le nombre de fois o&ugrave; les fonctions ont a &eacute;t&eacute; appel&eacute;es ou le nombre de bytes qui ont &eacute;t&eacute; allou&eacute;s pour chaque frame.</p>
+<h1>Conclusion</h1>
+<p>En r&eacute;sum&eacute; le Flame Graph est un puissant outil de visualisation de logs d&rsquo;outils d&rsquo;analyse de performance qui peut vous permettre de gagner un temps pr&eacute;cieux. J&rsquo;ai simplement voulu vous partager cette d&eacute;couverte dans cet article qui n&rsquo;est qu&rsquo;une rapide pr&eacute;sentation, je vous invite une nouvelle fois &agrave; vous rendre sur le blog de Brendan Gregg pour beaucoup plus de d&eacute;tails !</p>
+</div>
+]]></content:encoded>
+										</item>
+		<item>
+		<title>Le Temps Reel sous Linux</title>
+		<link>https://dev-pro.xyz/blog/le-temps-reel-sous-linux/</link>
+				<pubDate>Fri, 27 Dec 2019 15:50:33 +0000</pubDate>
+		<dc:creator><![CDATA[siz]]></dc:creator>
+				<category><![CDATA[kernel]]></category>
+		<category><![CDATA[Linux]]></category>
+		<category><![CDATA[preempt-rt]]></category>
+		<category><![CDATA[Technologie]]></category>
+		<category><![CDATA[temps réel]]></category>
+		<category><![CDATA[WhitePaper]]></category>
+		<category><![CDATA[Xenomai]]></category>
+
+		<guid isPermaLink="false">https://dev-pro.xyz/blog/le-temps-reel-sous-linux/</guid>
+				<description><![CDATA[Dans cet article, nous allons discuter de l&#8217;int&#233;r&#234;t ainsi que des avantages et inconv&#233;nients d&#8217;utiliser un noyau Linux temps r&#233;el. L&#8217;objectif de cet article n&#8217;est pas de d&#233;crire ce qu&#8217;est le temps r&#233;el mais pourquoi et comment l&#8217;utiliser.&#160;Aux lecteurs curieux et int&#233;ress&#233;s par le temps r&#233;el, je recommande le livre de Christophe Blaess, Solutions temps ... <a href="https://dev-pro.xyz/blog/le-temps-reel-sous-linux/" class="more-link text-uppercase small"><strong>Continue Reading</strong> <i class="fa fa-angle-double-right" aria-hidden="true"></i></a>]]></description>
+								<content:encoded><![CDATA[<div>
+<p>Dans cet article, nous allons discuter de l&rsquo;int&eacute;r&ecirc;t ainsi que des avantages et inconv&eacute;nients d&rsquo;utiliser un noyau Linux temps r&eacute;el. L&rsquo;objectif de cet article n&rsquo;est pas de d&eacute;crire ce qu&rsquo;est le temps r&eacute;el mais pourquoi et comment l&rsquo;utiliser.&nbsp;<br />Aux lecteurs curieux et int&eacute;ress&eacute;s par le temps r&eacute;el, je recommande le livre de<strong><em> </em></strong>Christophe Blaess, <em>Solutions temps r&eacute;el sous Linux</em>.</p>
+<h1>Introduction</h1>
+<h3>Historique</h3>
+<p>La notion de temps r&eacute;el a commenc&eacute; &agrave; appara&icirc;tre dans les ann&eacute;es 60 dans le domaine de l&rsquo;a&eacute;rospatial. En effet, l&rsquo;un des premiers syst&egrave;mes embarqu&eacute;s temps r&eacute;el fut l&rsquo;Apollo Guidance Computer con&ccedil;u par le MIT permettant du traitement temps r&eacute;el des donn&eacute;es recueillies lors du vol. La notion de temps r&eacute;el a cependant bien &eacute;volu&eacute; jusqu&rsquo;&agrave; maintenant.</p>
+<p>De nos jours, de nombreux syst&egrave;mes requi&egrave;rent des performances dites temps r&eacute;el. En effet, le march&eacute; des syst&egrave;mes embarqu&eacute;s est en pleine croissance et le besoin de solutions embarqu&eacute;es temps r&eacute;el augmente en cons&eacute;quence. Le temps r&eacute;el se retrouve en particulier dans les domaines suivants : </p>
+<ul>
+<li>Automobile</li>
+<li>Automatique industrielle&nbsp;</li>
+<li>T&eacute;l&eacute;communications</li>
+<li>Sant&eacute;/M&eacute;dical</li>
+<li>A&eacute;ronautique/A&eacute;rospatial</li>
+</ul>
+<h3>Qu&rsquo;est ce que le temps r&eacute;el ?</h3>
+<p>&nbsp;&nbsp;&nbsp; Il ne faut pas confondre temps r&eacute;el avec vitesse. Par exemple le syst&egrave;me de commande d&rsquo;un avion n&eacute;cessitera un temps de r&eacute;ponse de l&rsquo;ordre de la microseconde alors le syst&egrave;me de contr&ocirc;le d&rsquo;une cha&icirc;ne de production n&eacute;cessitera un temps de r&eacute;ponse de l&rsquo;ordre de la milliseconde. En revanche, il devront tous deux r&eacute;pondre dans un laps de temps d&eacute;fini et ne pas le d&eacute;passer. </p>
+<p>Il existe plusieurs notions de temps r&eacute;el : <strong>Le temps r&eacute;el strict (hard real time) et le temps r&eacute;el souple (soft real time).&nbsp;</strong></p>
+<p>&nbsp;&nbsp;&nbsp; Le temps r&eacute;el strict p&eacute;nalise le non-respect d&rsquo;une &eacute;ch&eacute;ance par l&rsquo;&eacute;mission d&rsquo;une erreur. La r&eacute;ponse du syst&egrave;me est donc consid&eacute;r&eacute;e comme erron&eacute;e. En revanche un temps r&eacute;el souple tol&egrave;re une certaine marge de d&eacute;passement.</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/TR_strict_vs_souple.png" alt="" class="wp-image-6902 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/TR_strict_vs_souple.png 625w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/TR_strict_vs_souple-300x64.png 300w" sizes="(max-width: 625px) 100vw, 625px"><figcaption>Image 1 : Diff&eacute;rence soft (droite) et hard (gauche) real time</figcaption></figure>
+</div>
+<h3>Les solutions temps r&eacute;el</h3>
+<p>&nbsp;&nbsp;&nbsp; Plusieurs solutions temps r&eacute;el sont disponibles aujourd&rsquo;hui, propri&eacute;taires comme libres. En voici quelques exemples : </p>
+<ul>
+<li>FreeRTOS</li>
+<li>QNX</li>
+<li>VxWorks</li>
+</ul>
+<hr class="wp-block-separator">
+<p>On peut ensuite lister les solutions avec noyaux hybrides qui pr&eacute;sentent d&rsquo;autres avantages. Certaines de ces solutions permettent d&rsquo;utiliser un noyau Linux et d&rsquo;y installer &agrave; c&ocirc;t&eacute; un noyau temps r&eacute;el. On peut citer : </p>
+<ul>
+<li>Xenomai (Cobalt), Xenomai Mercury est simplement l&rsquo;utilisation de l&rsquo;API Xenomai sur un noyau Linux patch&eacute; PREEMPT_RT.</li>
+<li>RTAI</li>
+</ul>
+<p>Xenomai se distingue par ses performances ainsi que la possibilit&eacute; d&rsquo;utiliser son API sans avoir obligatoirement &agrave; utiliser son co-noyau Xenomai Cobalt. A cet effet, Xenomai se d&eacute;cline en deux versions : Cobalt (co-noyau) et Mercury.</p>
+<p>Cobalt est la version la plus int&eacute;ressante si l&rsquo;on veut faire du temps r&eacute;el strict. Cobalt utilise le patch I-pipe qui installe un pipeline redistribuant les interruptions entre le noyau linux (pour les interruptions non temps r&eacute;el) et le noyau Cobalt (pour les interruptions temps r&eacute;el). Attention cependant, il est important de regarder la compatibilit&eacute; du patch avec le mat&eacute;riel utilis&eacute;.</p>
+<p>Mercury lui, permet d&rsquo;utiliser l&rsquo;API Xenomai sur un noyau linux patch&eacute; PREEMPT_RT. Mercury est plus simple &agrave; impl&eacute;menter que Cobalt mais reste moins performant.</p>
+<hr class="wp-block-separator">
+<p>&nbsp;&nbsp;&nbsp; Le noyau Linux mainline quant &agrave; lui poss&egrave;de quelques briques de base n&eacute;cessaire au temps r&eacute;el, comme par exemple un scheduler qui propose des politiques de scheduling temps r&eacute;el. </p>
+<p>En effet, dans les options de kernel, on peut choisir la pr&eacute;emptibilit&eacute; du noyau linux. Par d&eacute;faut, seulement 3 options sont disponibles, la meilleure de ces trois options pour s&rsquo;approcher d&rsquo;un comportement temps r&eacute;el &eacute;tant la pr&eacute;emptibilit&eacute; Low-Latency. Cependant si l&rsquo;on veut vraiment faire du temps r&eacute;el, il faudra se tourner vers d&rsquo;autres solutions. </p>
+<p>Il est possible d&rsquo;ajouter deux autres options de configuration en patchant le kernel &agrave; l&rsquo;aide du patch PREEMPT_RT. Ce patch n&rsquo;est actuellement pas pris en charge par le kernel mainline mais est en bonne voie pour devenir partie int&eacute;grante du kernel dans les mois ou les ann&eacute;es &agrave; venir.</p>
+<figure class="wp-block-image"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/Preempt_rt-1024x583.png" alt="" class="wp-image-6938 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/Preempt_rt-1024x583.png 1024w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/Preempt_rt-300x171.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/Preempt_rt-768x437.png 768w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/Preempt_rt.png 1040w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+<p>&nbsp;&nbsp;&nbsp; Nous allons maintenant parcourir les changements introduits par le patch PREEMPT_RT, &eacute;valuer les performances des diff&eacute;rentes solutions temps r&eacute;el sous Linux et &eacute;voquer des exemples d&rsquo;impl&eacute;mentation de temps r&eacute;el sous linux.</p>
+<hr class="wp-block-separator">
+<h1>Apports du patch PREEMPT_RT</h1>
+<p>&nbsp;&nbsp;&nbsp; Le patch PREEMPT_RT ajoute l&rsquo;option de compilation du noyau CONFIG_PREEMPT_RT_FULL. Elle se traduit par l&rsquo;ajout de lignes dans le code du kernel, de type : </p>
+<pre class="wp-block-code"><code>#ifdef CONFIG_PREEMPT_RT_FULL
+&lt;code modifi&eacute; RT&gt;
+#else
+&lt;code vanilla&gt;
+#endif</code></pre>
+<p>&nbsp;&nbsp;&nbsp; Le principe du patch PREEMPT RT est d&rsquo;autoriser la pr&eacute;emption partout m&ecirc;me dans les interruptions, &agrave; l&rsquo;aide de l&rsquo;ajout des m&eacute;canismes  que nous allons d&eacute;crire ci-apr&egrave;s.</p>
+<h3>Spinlock et Mutex</h3>
+<p>&nbsp;&nbsp;&nbsp; Dans le patch PREEMPT_RT, l&rsquo;int&eacute;r&ecirc;t est de pouvoir pr&eacute;empter toutes les t&acirc;ches, m&ecirc;mes celles poss&eacute;dant un spinlock, pour laisser s&rsquo;ex&eacute;cuter la t&acirc;che la plus prioritaire. Dans cette optique, le r&ocirc;le du patch est donc de transformer les spinlocks actuels en sleeping spinlocks, soit en rt_mutex. En effet, les spinlocks ne sont pas pr&eacute;emptibles par d&eacute;faut, ce qui peut poser probl&egrave;me lorsqu&rsquo;on fait du temps r&eacute;el.</p>
+<p>On peut le voir dans le fichier <em>&lt;spinlock_types.h&gt;</em> : </p>
+<pre class="wp-block-code"><code>#include &lt;linux/spinlock_types_raw.h&gt;
+
+#ifndef CONFIG_PREEMPT_RT_FULL
+# include &lt;linux/spinlock_types_nort.h&gt;
+# include &lt;linux/rwlock_types.h&gt;
+#else
+# include &lt;linux/rtmutex.h&gt;
+# include &lt;linux/spinlock_types_rt.h&gt;
+# include &lt;linux/rwlock_types_rt.h&gt;
+#endif</code></pre>
+<p>Et dans le fichier <em>&lt;linux/spinlock_types_rt.h&gt;</em> :</p>
+<pre class="wp-block-code"><code>typedef struct spinlock {
+    struct rt_mutex        lock;
+    unsigned int        break_lock;
+#ifdef CONFIG_DEBUG_LOCK_ALLOC
+    struct lockdep_map    dep_map;
+#endif
+} spinlock_t;</code></pre>
+<p>&nbsp;&nbsp;&nbsp; Voici ci-dessous le fonctionnement des spinlocks dans un kernel mainline. Prenons l&rsquo;exemple d&rsquo;un programme poss&eacute;dant deux threads, tout deux s&rsquo;ex&eacute;cutant sur un m&ecirc;me coeur. Le premier thread (VERT), se lance jusqu&rsquo;&agrave; rencontrer une zone de code prot&eacute;g&eacute;e par un spinlock. Pendant ce temps, le thread 2 (BLEU), plus prioritaire est pr&ecirc;t &agrave; s&rsquo;ex&eacute;cuter mais comme le thread 1 est dans un spinlock, le thread 2 devra attendre la fin de la zone de code prot&eacute;g&eacute;e par un spinlock.</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/spinlock_avantRT-1.png" alt="" class="wp-image-6839 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/spinlock_avantRT-1.png 792w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/spinlock_avantRT-1-300x92.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/spinlock_avantRT-1-768x237.png 768w" sizes="(max-width: 792px) 100vw, 792px"><figcaption>Image 2 : Exemple spinlocks avant patch preempt RT</figcaption></figure>
+</div>
+<p>&nbsp;&nbsp;&nbsp; Maintenant avec le patch PREEMPT_RT, on voit que le scheduler donne la main au thread 2 poss&eacute;dant une priorit&eacute; plus &eacute;lev&eacute;e. Ces changements peuvent &ecirc;tre lus sur la documentation de la fondation Linux, on peut voir notamment qu&rsquo;un spinlock se comporte donc comme un rt_mutex (&ldquo;<em>In order to minimize the changes to the kernel source the existing spinlock_t datatype and the functions which operate on it retain their old names but, when PREEMPT_RT is enabled, now refer to an rt_mutex lock</em>&rdquo;) : </p>
+<p><a href="https://wiki.linuxfoundation.org/realtime/documentation/technical_details/sleeping_spinlocks">https://wiki.linuxfoundation.org/realtime/documentation/technical_details/sleeping_spinlocks</a></p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/spinlock_apresRT.png" alt="" class="wp-image-6841 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/spinlock_apresRT.png 846w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/spinlock_apresRT-300x93.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/spinlock_apresRT-768x237.png 768w" sizes="(max-width: 846px) 100vw, 846px"><figcaption>Image 3 : Image 2 : Exemple spinlocks apr&egrave;s patch preempt RT</figcaption></figure>
+</div>
+<h3>Raw spinlock</h3>
+<p>&nbsp;&nbsp;&nbsp; Bien que les spinlocks deviennent des mutex, il reste des endroits dans le kernel o&ugrave; il est n&eacute;cessaire d&rsquo;avoir recours &agrave; de vrais spinlocks. En effet, certains endroits du kernel ne devraient pas &ecirc;tre pr&eacute;emptibles car ils sont vraiment critiques. </p>
+<p>De plus, les spinlocks ont l&rsquo;avantage d&rsquo;&ecirc;tre plus rapides que les mutex. Pour cela, il existe les raw_spinlocks qui sont en r&eacute;alit&eacute; les spinlocks du kernel classique non patch&eacute;. </p>
+<p>Ils ont &eacute;t&eacute; ajout&eacute;s au kernel mainline mais ne sont d&rsquo;aucune utilit&eacute; dans un kernel non patch&eacute;. Il faut cependant prendre garde &agrave; leur utilisation dans un syst&egrave;me temps r&eacute;el. En effet, les raw_spinlocks d&eacute;sactivent la pr&eacute;emption et les interruptions, ce qui peut engendrer des latences non d&eacute;sir&eacute;es et donc d&eacute;grader l&rsquo;aspect temps r&eacute;el du syst&egrave;me. </p>
+<h3>Threaded Interrupts</h3>
+<p>&nbsp;&nbsp;&nbsp; Comme l&rsquo;objectif du patch PREEMPT_RT est de rendre le kernel aussi pr&eacute;emptible que possible, il para&icirc;t normal de modifier le fonctionnement des interruptions. Nous allons tout d&rsquo;abord revoir le fonctionnement classique des interruptions.</p>
+<p><strong>Interruptions classiques :</strong> Dans le kernel linux, lorsque une interruption survient, c&rsquo;est &agrave; dire lorsqu&rsquo;un p&eacute;riph&eacute;rique externe change d&rsquo;&eacute;tat (des donn&eacute;es sur le port ethernet, le changement d&rsquo;&eacute;tat d&rsquo;une broche GPIO, etc.), le p&eacute;riph&eacute;rique envoie un signal au gestionnaire d&rsquo;interruptions APIC (<em>Advanced Programmable Interrupt Controler</em>). </p>
+<p>Le gestionnaire transmet ensuite une requ&ecirc;te d&rsquo;interruption IRQ (Interrupt Request) au processeur. Ce dernier s&rsquo;arr&ecirc;te, sauvegarde son contexte puis traite l&rsquo;interruption concern&eacute;e. Pour traiter l&rsquo;interruption, plusieurs m&eacute;thodes existent, mais la plus courante est celle des top-half et bottom-half.</p>
+<p><strong>Top-half et bottom-half interrupts handler : </strong>Pour traiter une interruption en &eacute;vitant de monopoliser une unit&eacute; de calcul, le moyen le plus utilis&eacute; est celui des <em>top-half</em> et <em>bottom-half</em>. </p>
+<p>Ce m&eacute;canisme consiste &agrave; ex&eacute;cuter le top-half au moment de l&rsquo;interruption, qui effectuera le minimum vital au traitement de l&rsquo;ex&eacute;cution. Il programmera ensuite dans une file d&rsquo;ex&eacute;cution un handler <em>bottom-half</em> qui traitera l&rsquo;interruption proprement une fois qu&rsquo;elle sera d&eacute;masqu&eacute;e dans l&rsquo;APIC et que le processeur disposera de temps de travail disponible. </p>
+<p>Cette m&eacute;thode permet ainsi de pouvoir g&eacute;rer une succession rapide d&rsquo;interruptions vu que le bottom-half est programm&eacute; dans tous les cas.</p>
+<p><strong>Threaded interrupts : </strong>Pour permettre au syst&egrave;me de g&eacute;rer des contraintes temps r&eacute;el, le patch PREEMPT_RT met en place des <em>threaded interrupts</em>. </p>
+<p>Les <em>threaded interrupts</em> reprennent le concept top-half bottom-half, mais remplacent le handler du bottom-half par un thread. Cela permet de donner une priorit&eacute; au thread et de le pr&eacute;empter si un thread avec une priorit&eacute; plus &eacute;lev&eacute; est <em>runnable</em>.</p>
+<h3>H&eacute;ritage de priorit&eacute;</h3>
+<p>&nbsp;&nbsp;&nbsp; Le dernier changement important &agrave; noter est l&rsquo;ajout de l&rsquo;h&eacute;ritage de priorit&eacute; pour les mutex et les spinlock. Pour illustrer l&rsquo;h&eacute;ritage de priorit&eacute; et son importance, regardons le cas suivant. </p>
+<p>Tout d&rsquo;abord, sans h&eacute;ritage. On peut voir sur le sch&eacute;ma ci-dessous, que le thread 3 poss&egrave;de initialement un mutex. Le thread 1 devenant runnable, commence &agrave; ex&eacute;cuter son code jusqu&rsquo;&agrave; ce qu&rsquo;il demande le mutex tenu par le thread 3, ce qui provoque son endormissement. Le thread 3 reprend alors son ex&eacute;cution. Cependant, avant d&rsquo;avoir pu rel&acirc;cher le mutex, le scheduler le pr&eacute;empte en faveur du thread 2 qui s&rsquo;ex&eacute;cute pour une p&eacute;riode ind&eacute;finie. </p>
+<p>On constate alors que le thread 1 qui a la priorit&eacute; la plus &eacute;lev&eacute;e ne pourra pas s&rsquo;ex&eacute;cuter, ce qui par cons&eacute;quent pose un probl&egrave;me lorsqu&rsquo;on fait du temps r&eacute;el du fait que le thread avec la plus grande priorit&eacute; ne s&rsquo;ex&eacute;cute pas, on appelle &ccedil;a une famine.</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/heritage_avantRT.png" alt="" class="wp-image-6843 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/heritage_avantRT.png 843w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/heritage_avantRT-300x164.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/heritage_avantRT-768x420.png 768w" sizes="(max-width: 843px) 100vw, 843px"><figcaption>Image 4 : Exemple h&eacute;ritage de priorit&eacute; avant patch preempt RT</figcaption></figure>
+</div>
+<p>Dans ce second exemple avec l&rsquo;h&eacute;ritage de priorit&eacute;, on peut voir comme tout &agrave; l&rsquo;heure que le thread 3 poss&egrave;de initialement le mutex. Mais lorsque le thread 1 demande le mutex poss&eacute;d&eacute; par le thread 3, le thread 3 h&eacute;rite de la priorit&eacute; du thread 1 ce qui lui permet de rel&acirc;cher le mutex pour permettre au thread 1 de s&rsquo;ex&eacute;cuter, puis le thread 2 pourra s&rsquo;ex&eacute;cuter.&nbsp;</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/heritage_apresRT.png" alt="" class="wp-image-6845 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/heritage_apresRT.png 830w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/heritage_apresRT-300x174.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/heritage_apresRT-768x445.png 768w" sizes="(max-width: 830px) 100vw, 830px"><figcaption>Image 5 : Exemple h&eacute;ritage de priorit&eacute; apr&egrave;s patch preempt RT</figcaption></figure>
+</div>
+<h1>Impl&eacute;mentation du temps r&eacute;el sur noyau Linux</h1>
+<h2>Les options du noyau Linux&nbsp;</h2>
+<p>&nbsp;&nbsp;&nbsp; L&rsquo;impl&eacute;mentation du temps r&eacute;el sur noyau linux est relativement simple, mais l&rsquo;obtention de performances optimales est conditionn&eacute;e &agrave; la modification d&rsquo;options annexes. Durant les phases d&rsquo;&eacute;valuation des diff&eacute;rentes solutions temps r&eacute;el et de leurs performances, nous avons constat&eacute; que certaines options impactaient les performances plus que d&rsquo;autres.</p>
+<h3>Power Management</h3>
+<p>&nbsp;&nbsp;&nbsp; En contexte temps r&eacute;el, l&rsquo;important est d&rsquo;avoir un syst&egrave;me r&eacute;actif qui puisse r&eacute;agir &agrave; la moindre interruption externe au syst&egrave;me. L&rsquo;activation du power management sur le CPU cause un risque d&rsquo;augmentation de la latence du CPU. En effet, lorsque le power management est activ&eacute;, le CPU va adapter sa fr&eacute;quence pour &eacute;conomiser de l&rsquo;&eacute;nergie. </p>
+<p>Cette option reste cependant int&eacute;ressante lorsque l&rsquo;on fait de l&rsquo;embarqu&eacute;, au vu de la dur&eacute;e des batteries actuelles, mais emp&ecirc;che cependant d&rsquo;obtenir des performances temps r&eacute;el. Il peut &ecirc;tre int&eacute;ressant d&rsquo;utiliser le power management sur certains c&oelig;urs (cela peut se faire au moment du boot comme pour les <a href="https://www.linuxembedded.fr/#Timers">timers</a> ci-apr&egrave;s) et d&rsquo;utiliser les autres c&oelig;urs pour toutes les t&acirc;ches temps r&eacute;els.</p>
+<p>&nbsp;&nbsp;&nbsp; Pour d&eacute;sactiver le power management, il faut tout d&rsquo;abord d&eacute;sactiver le multi-core scheduler support. En effet, ce dernier nous emp&ecirc;che de retirer le power management. </p>
+<ul>
+<li>SCHED_MC [=n]</li>
+</ul>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num1-1.png" alt="" class="wp-image-7019 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num1-1.png 664w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num1-1-300x84.png 300w" sizes="(max-width: 664px) 100vw, 664px"></figure>
+</div>
+<p>&nbsp;&nbsp;&nbsp; Une fois le multi-core scheduler support d&eacute;sactiv&eacute;, on peut maintenant d&eacute;sactiver le CPU Frequency scaling et le CPU Idle. Le CPU Frequency scaling permet de choisir le <em>governor</em> &agrave; utiliser pour g&eacute;rer la fr&eacute;quence du CPU, ce qui est inutile dans notre cas : nous souhaitons que tous les c&oelig;urs tournent &agrave; 100% afin de maximiser les performances. En revanche, cela implique une consommation plus &eacute;lev&eacute;e. Il se peut, si vous avez un processeur qui supporte l&rsquo;ACPI, que l&rsquo;option CPU Idle ne soit pas d&eacute;sactivable, ce que traitera le paragraphe suivant.</p>
+<ul>
+<li>CPU_FREQ [=n]</li>
+<li>CPU_IDLE [=n]</li>
+</ul>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/Capture-d%E2%80%99%C3%A9cran-du-2019-09-09-15-36-10.png" alt="" class="wp-image-6832 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/Capture-d&rsquo;&eacute;cran-du-2019-09-09-15-36-10.png 328w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/Capture-d&rsquo;&eacute;cran-du-2019-09-09-15-36-10-300x48.png 300w" sizes="(max-width: 328px) 100vw, 328px"></figure>
+</div>
+<div class="wp-block-image">
+<figure class="alignleft"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/Capture-d%E2%80%99%C3%A9cran-du-2019-09-09-15-36-36.png" alt="" class="wp-image-6833 img-fluid"></figure>
+</div>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/Capture-d%E2%80%99%C3%A9cran-du-2019-09-09-15-36-50.png" alt="" class="wp-image-6834 img-fluid"></figure>
+</div>
+<p>Sur <strong>certains processeurs</strong>, comme ceux d&rsquo;<strong>intel</strong>, l&rsquo;ACPI (Advanced Configuration and Power Interface) g&egrave;re le <em>power management</em>. Il faut donc d&eacute;sactiver l&rsquo;ACPI seulement pour le processeur, car une d&eacute;sactivation pour d&rsquo;autres composants pourrait emp&ecirc;cher le syst&egrave;me de d&eacute;marrer correctement. De plus, sa d&eacute;sactivation est un pr&eacute;alable &agrave; celle du CPU Idle.</p>
+<ul>
+<li>ACPI_PROCESSOR [=n]</li>
+</ul>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num2-1.png" alt="" class="wp-image-7020 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num2-1.png 549w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num2-1-300x150.png 300w" sizes="(max-width: 549px) 100vw, 549px"></figure>
+</div>
+<h3>SMP</h3>
+<p>&nbsp;&nbsp;&nbsp; Si votre syst&egrave;me ne poss&egrave;de qu&rsquo;un seul c&oelig;ur, cette section ne vous concerne pas, il faudra donc d&eacute;sactiver cette option.</p>
+<p>Le SMP (Symmetric multi-processing), permet &agrave; un syst&egrave;me poss&eacute;dant plusieurs c&oelig;urs de les utiliser et donc d&rsquo;ex&eacute;cuter plusieurs t&acirc;ches &agrave; la fois. Le probl&egrave;me de poss&eacute;der plusieurs c&oelig;urs est qu&rsquo;ils partagent des zones m&eacute;moires et notamment de la m&eacute;moire cache L2 (cela d&eacute;pend de l&rsquo;architecture du processeur). Le fait de partager de la m&eacute;moire augmente le temps d&rsquo;acc&egrave;s &agrave; la zone m&eacute;moire. Pour &eacute;viter ce probl&egrave;me, il est conseill&eacute; de bien g&eacute;rer les affinit&eacute;s des t&acirc;ches et des processus. Pour activer le multi-processing il suffit de choisir l&rsquo;option Symmetric multi-processing support.</p>
+<ul>
+<li>SMP [=y]</li>
+</ul>
+<h3 id="Timers">Timers</h3>
+<p>&nbsp;&nbsp;&nbsp; Ensuite, nous devons param&eacute;trer les timers pour obtenir une plus grande r&eacute;activit&eacute;. Tout d&rsquo;abord, il faut activer le timer haute r&eacute;solution qui fournit une meilleure pr&eacute;cision pour tous nos programmes user-space.</p>
+<ul>
+<li>HIGH_RES_TIMERS [=y]</li>
+</ul>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num3-1.png" alt="" class="wp-image-7021 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num3-1.png 785w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num3-1-300x30.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num3-1-768x76.png 768w" sizes="(max-width: 785px) 100vw, 785px"></figure>
+</div>
+<p>&nbsp;&nbsp;&nbsp; Ensuite, pour &eacute;viter au syst&egrave;me de se mettre en veille, il faut laisser les timers interrompre le syst&egrave;me p&eacute;riodiquement afin de ne pas manquer d&rsquo;&eacute;v&eacute;nements importants. Il faut donc modifier l&rsquo;option Timer tick handling comme on peut le voir ci-dessous, et choisir l&rsquo;option <strong>Periodic timer ticks.</strong> Il peut &ecirc;tre int&eacute;ressant de choisir cette option pour certains c&oelig;urs, dans ce cas il faudra donner les options de<em> boot </em>suivantes pour isoler les c&oelig;urs et les rendre <em>tickless</em> : <em>&laquo;&nbsp;isolcpus=2,3 nohz_full=2,3&nbsp;&raquo;</em></p>
+<ul>
+<li>HZ_PERIODIC [=y]</li>
+</ul>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num4-1.png" alt="" class="wp-image-7022 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num4-1.png 618w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num4-1-300x150.png 300w" sizes="(max-width: 618px) 100vw, 618px"></figure>
+</div>
+<hr class="wp-block-separator">
+<h2>Les impacts sur le d&eacute;veloppement applicatif et le syst&egrave;me</h2>
+<h3>Affinit&eacute;s</h3>
+<p>&nbsp;&nbsp;&nbsp; Lorsque l&rsquo;on fait du temps r&eacute;el sous linux, il est important de g&eacute;rer l&rsquo;affinit&eacute; de ses t&acirc;ches et des interruptions. </p>
+<p>La premi&egrave;re chose &agrave; faire, surtout si l&rsquo;on est en SMP, est de modifier l&rsquo;affinit&eacute; des interruptions du syst&egrave;me dans /proc/interrupts pour emp&ecirc;cher les migrations de c&oelig;ur qui augmentent la latence. Il est pr&eacute;f&eacute;rable de regrouper certaines interruptions sur le m&ecirc;me CPU pour r&eacute;server les autres CPUs &agrave; notre application temps r&eacute;el. </p>
+<p>Pour modifier l&rsquo;affinit&eacute; d&rsquo;une interruption, il faut modifier le pseudo-fichier <em>/proc/irq/&lt;NumeroIRQ&gt;/smp_affinity</em> &agrave; l&rsquo;aide de la commande :<em>&laquo;&nbsp;echo 8 &gt; /proc/irq/127/smp_affinity&nbsp;&raquo;</em> pour par exemple mettre l&rsquo;interruption 127 sur le CPU 4. Ce fichier contient en effet un masque binaire d&eacute;finissant le ou les cpus &agrave; utiliser en cas d&rsquo;interruption. Par exemple 0001 repr&eacute;sente le CPU 0 tandis que 1001 repr&eacute;sente les CPUs 0 et 4. Il est important de noter que le fichier <em>/proc/irq/NumeroIRQ/smp_affinity</em> attend une valeur en hexad&eacute;cimal, ce qui explique la valeur 8 pr&eacute;c&eacute;dente.</p>
+<p>On peut voir ci-dessous les interruptions et leur nombre d&rsquo;occurences sur chaque cpu de ma raspberry pi 4 &agrave; l&rsquo;aide de la commande <em>&laquo;&nbsp;cat /proc/interrupts&nbsp;&raquo;</em>.</p>
+<figure class="wp-block-image"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num5-1-1024x276.png" alt="" class="wp-image-7023 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num5-1-1024x276.png 1024w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num5-1-300x81.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num5-1-768x207.png 768w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num5-1.png 1032w" sizes="(max-width: 1024px) 100vw, 1024px"><figcaption>Image 6 : R&eacute;sultat de la commande &laquo;&nbsp;cat /proc/interrrupts&nbsp;&raquo;</figcaption></figure>
+<p>&nbsp;&nbsp;&nbsp; Lors du d&eacute;veloppement applicatif d&rsquo;une solution temps r&eacute;el, il est important de bien choisir l&rsquo;affinit&eacute; de ses threads et de son processus principal. Pour les threads, il existe la fonction <strong><em>pthread_attr_setaffinity_np()</em></strong> et pour le processus principal, on peut utiliser la commande <strong><em>taskset </em></strong>ou la fonction <strong><em>sched_setaffinity().&nbsp;</em></strong></p>
+<p><strong><em>&nbsp;&nbsp;&nbsp; </em></strong>Pour v&eacute;rifier l&rsquo;utilisation de chaque thread de son programme, on peut utiliser la commande suivante : &ldquo;<em>watch -n 1 ps -p $(pidof monProgramme) -L -o pid,tid,psr,pcpu,comm</em>&rdquo;. Cela permet de lister pour un PID donn&eacute;, tous les threads pr&eacute;sents et d&rsquo;afficher sur quel c&oelig;ur ils s&rsquo;ex&eacute;cutent. On peut voir ci-dessous le r&eacute;sultat de cette commande sur un programme personnel.</p>
+<p>La colonne PID repr&eacute;sente le PID du programme, le TID celui du thread, PSR indique sur quel c&oelig;ur le thread s&rsquo;ex&eacute;cute et %CPU sa consommation CPU. Enfin, la colonne COMMAND permet de conna&icirc;tre le nom du thread si vous avez utilis&eacute; la fonction<strong><em> pthread_setname_np()</em></strong>.</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num6.png" alt="" class="wp-image-7024 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/10/num6.png 315w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/num6-300x229.png 300w" sizes="(max-width: 315px) 100vw, 315px"><figcaption>Image 7 : R&eacute;sultat de la commande &laquo;&nbsp;watch -n 1 ps -p $(pidof cam) -L -o pid,tid,psr,pcpu,comm&nbsp;&raquo;</figcaption></figure>
+</div>
+<p>&nbsp;&nbsp;&nbsp; Il est recommand&eacute; de bien conna&icirc;tre l&rsquo;architecture de son processeur, et d&rsquo;&eacute;tablir un plan d&rsquo;affectation des ressources : laisser un c&oelig;ur pour le syst&egrave;me (le coeur 0), et r&eacute;partir les activit&eacute;s sur les autres c&oelig;urs.</p>
+<h3><em>Real Time Throttling</em></h3>
+<p>Lorsque vous ex&eacute;cutez une application temps r&eacute;el sur un syst&egrave;me temps r&eacute;el, par d&eacute;faut le syst&egrave;me ne donne pas acc&egrave;s &agrave; 100% du CPU. En effet, le <em>scheduler</em> temps r&eacute;el ne permet &agrave; un processus que de consommer 95% du temps CPU. Ces param&egrave;tres sont r&eacute;gis par les pseudo fichiers suivants :</p>
+<ul>
+<li> <em>/proc/sys/kernel/sched_rt_period_us</em></li>
+<li><em> /proc/sys/kernel/sched_rt_runtime_us</em></li>
+</ul>
+<p>Ces param&egrave;tres permettent d&rsquo;allouer un temps de s<em>ched_rt_runtime_us</em> sur une p&eacute;riode de <em>sched_rt_period_us</em>. Par d&eacute;faut ce ratio vaut <em>950000 &micro;s</em>/100000 <em>&micro;s</em>, soit 95%. Cela permet d&rsquo;&eacute;viter qu&rsquo;une application erron&eacute;e ne prenne tout le CPU et emp&ecirc;che le syst&egrave;me de r&eacute;agir &agrave; d&rsquo;autres &eacute;v&eacute;nements.</p>
+<p>En revanche, il peut &ecirc;tre int&eacute;ressant sur un syst&egrave;me valid&eacute; d&rsquo;optimiser ce ratio, voire de d&eacute;sactiver cette option en mettant -1 dans <em>/proc/sys/kernel/sched_rt_period_us</em> ou en r&eacute;glant <em>sched_rt_period_us = sched_rt_runtime_us</em> : <em>&laquo;&nbsp;echo -1 &gt; /proc/sys/kernel/sched_rt_period_us&nbsp;&raquo;</em>.</p>
+<h1>Performances</h1>
+<p>Afin de mesurer les performances des diff&eacute;rentes solutions temps r&eacute;el, j&rsquo;ai utilis&eacute; les outils suivants :&nbsp;</p>
+<ul>
+<li>Un script lan&ccedil;ant des <em>cyclictest</em> avec un ordonnancement<em> </em>SCHED_OTHER, SCHED_RR (round-robin) et SCHED_FIFO avec une priorit&eacute; de 99, subissant une charge simul&eacute;e par le programme <em>stress</em>. Chaque test a &eacute;t&eacute; jou&eacute; durant une heure.</li>
+<li>Un programme cod&eacute; en C calculant le temps de commutation d&rsquo;un thread &agrave; l&rsquo;autre au moment de l&acirc;cher un mutex, sous charge et sans charge, sur m&ecirc;me CPU. Chaque test prenant en compte 10000 commutations.</li>
+</ul>
+<p>J&rsquo;ai r&eacute;alis&eacute; ces tests sur les syst&egrave;mes suivants : </p>
+<ol>
+<li><strong>x86_64</strong>
+<ol>
+<li><em>Linux vanilla 4.14.71</em></li>
+<li><em>Linux vanilla 4.14.71 PREEMPT_RT</em></li>
+<li><em>Xenomai Cobalt 3.0.8 sous linux vanilla 4.14.71</em></li>
+<li><em>Xenomai Mercury 3.0.8 sous linux vanilla 4.14.71 PREEMPT_RT</em></li>
+</ol>
+</li>
+<li><strong>Raspberry pi 3B, arm 64bits</strong>
+<ol>
+<li><em>Linux rpi 4.14.71</em></li>
+<li><em>Linux rpi 4.14.71 PREEMPT_RT</em></li>
+<li><em>Xenomai Cobalt 3.0.8 sous linux rpi 4.14.71</em></li>
+<li><em>Xenomai Mercury 3.0.8 sous linux rpi 4.14.71 PREEMPT_RT</em></li>
+</ol>
+</li>
+</ol>
+<h3>Cyclictest</h3>
+<p>&nbsp;&nbsp;&nbsp; Tout au long de cette partie, je ne vais parler que de l&rsquo;ordonnancement SCHED_FIFO car ses performances sont quasi &eacute;quivalentes &agrave; celles de l&rsquo;ordonnancement round-robin, et l&rsquo;ordonnancement SCHED_OTHER ne concerne pas le temps r&eacute;el.</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-rpi-1-1024x768.png" alt="" class="wp-image-6904 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-rpi-1-1024x768.png 1024w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-rpi-1-300x225.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-rpi-1-768x576.png 768w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-rpi-1.png 1280w" sizes="(max-width: 1024px) 100vw, 1024px"><figcaption>Image 8 : R&eacute;sultats cyclictest sur raspberry pi 3B</figcaption></figure>
+</div>
+<p>&nbsp;&nbsp;&nbsp; On peut voir sur cette premi&egrave;re s&eacute;rie de benchmarks les diff&eacute;rences entre les diff&eacute;rents syst&egrave;mes. On remarque que seul le kernel linux classique d&eacute;passe les 400 &micro;s de latences et que les autres ne d&eacute;passent pas les 100 &micro;s. Attention cependant, sur le kernel normal, il y a des pics en dehors du graphique &agrave; plus de 10000 &micro;s comme indiqu&eacute; sur le graphique, ce qui pose donc le probl&egrave;me du d&eacute;terminisme du syst&egrave;me. Avec les trois autres syst&egrave;mes, le max ne d&eacute;passe pas les 100 &micro;s.</p>
+<p>&nbsp;&nbsp;&nbsp; On peut ensuite voir que les performances sont sensiblement &eacute;quivalentes entre un syst&egrave;me sous Xenomai Mercury et un syst&egrave;me patch&eacute; PREEMPT RT. Enfin la meilleure performance vient du syst&egrave;me sous Xenomai Cobalt qui affiche une latence maximale sous les 10 &micro;s avec une moyenne bien plus basse que les 2 autres, <strong><em>et les latences semblent mieux born&eacute;es.</em></strong></p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-x86_64-1-1024x768.png" alt="" class="wp-image-6905 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-x86_64-1-1024x768.png 1024w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-x86_64-1-300x225.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-x86_64-1-768x576.png 768w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/fifo-x86_64-1.png 1280w" sizes="(max-width: 1024px) 100vw, 1024px"><figcaption>Image 9 : R&eacute;sultats cyclictest sur x86_64</figcaption></figure>
+</div>
+<p>&nbsp;&nbsp;&nbsp; Passons maintenant sous x86_64, on peut voir que le m&ecirc;me ordre est respect&eacute;, sauf pour Xenomai Mercury qui pr&eacute;sente de moins bonnes performances que ses concurrents. Comme tout &agrave; l&rsquo;heure le test sous linux 4.14.71 non pr&eacute;emptible r&eacute;v&egrave;le des pics &agrave; plus de 10000 &micro;s comme indiqu&eacute; sur le graphique qui sortent de la port&eacute; du graphique.</p>
+<h3>Commutations de threads</h3>
+<p>&nbsp;&nbsp;&nbsp; Afin de mesurer les performances de commutations, j&rsquo;ai cod&eacute; un petit programme qui calcule le temps que met le cpu pour changer de thread. Le principe du programme est le suivant : le thread 1 prend un mutex, puis le rel&acirc;che. Le scheduler est appel&eacute; et le thread 2 se lance en prenant le mutex. Le temps s&eacute;parant la fin du thread 1 du d&eacute;but du thread 2 est mesur&eacute; et stock&eacute; dans une variable globale prot&eacute;g&eacute;e par le mutex. Au bout de 10000 mesures, le r&eacute;sultat est affich&eacute;.</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/tempsCommutation.png" alt="" class="wp-image-6861 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/tempsCommutation.png 620w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/tempsCommutation-300x120.png 300w" sizes="(max-width: 620px) 100vw, 620px"><figcaption>Image 10 : Exemple temps de commutations entre deux threads</figcaption></figure>
+</div>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-Rpi-stress-1024x768.png" alt="" class="wp-image-6868 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-Rpi-stress-1024x768.png 1024w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-Rpi-stress-300x225.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-Rpi-stress-768x576.png 768w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-Rpi-stress.png 1600w" sizes="(max-width: 1024px) 100vw, 1024px"><figcaption>Image 11 : R&eacute;sultats commutations de threads sur raspberry pi 3B</figcaption></figure>
+</div>
+<p>&nbsp;&nbsp;&nbsp; Les r&eacute;sultats ci-dessus montrent les diff&eacute;rences de performances sur Raspberry Pi sous stress. On peut voir que les performances entre un linux non patch&eacute; et patch&eacute; PREEMPT_RT sont assez similaires, avec une valeur max de 90 &micro;s. En revanche on peut voir un r&eacute;sultat assez &eacute;trange : les moins bonnes performances sont atteintes par Xenomai Mercury. Enfin, Xenomai Cobalt obtient les meilleures performances.</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-x86_64-stress-1024x768.png" alt="" class="wp-image-6869 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-x86_64-stress-1024x768.png 1024w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-x86_64-stress-300x225.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-x86_64-stress-768x576.png 768w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-x86_64-stress.png 1600w" sizes="(max-width: 1024px) 100vw, 1024px"><figcaption>Image 12 : R&eacute;sultats commutations de threads sur x86_64</figcaption></figure>
+</div>
+<p>&nbsp;&nbsp;&nbsp; Passons maintenant sur x86_64, nous observons sensiblement les m&ecirc;mes r&eacute;sultats que sur arm64, avec toujours un retard de performance pour Xenomai Mercury.</p>
+<h3>Diff&eacute;rences entre POSIX et Alchemy (Xenomai)</h3>
+<p>&nbsp;&nbsp;&nbsp; Xenomai propose des skins, qui sont de petits wrappers permettant d&rsquo;utiliser des APIs venant d&rsquo;autres syst&egrave;mes comme VxWorks ou POSIX avec Xenomai. La librairie native &agrave; xenomai est la librairie Alchemy qui est assez compl&egrave;te et fournit des outils tr&egrave;s utiles comme des queues optimis&eacute;es, des buffers, des pipes, des s&eacute;maphores etc&hellip;</p>
+<p>&nbsp;&nbsp;&nbsp; Nous allons voir la diff&eacute;rence de performance entre les deux skins POSIX et Alchemy, gr&acirc;ce &agrave; un portage du programme r&eacute;alis&eacute; pour la commutation de threads sous les deux librairies. Voici ci-dessous les performances sous Xenomai Mercury. On peut voir un petit gain de performance avec la librairie native.</p>
+<figure class="wp-block-image"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-posixvsalchemy-1024x384.png" alt="" class="wp-image-6870 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-posixvsalchemy-1024x384.png 1024w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-posixvsalchemy-300x113.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-posixvsalchemy-768x288.png 768w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/plot-mutex-posixvsalchemy.png 1600w" sizes="(max-width: 1024px) 100vw, 1024px"><figcaption>Image 13 : R&eacute;sultats commutations de threads sur raspberry pi 3B, diff&eacute;rences APIs POSIX vs Alchemy</figcaption></figure>
+<h1>&nbsp;Conclusion</h1>
+<p>&nbsp;&nbsp;&nbsp; Pour conclure, nous constatons avec &eacute;vidence que Xenomai Cobalt est la meilleure des solutions pour faire du Linux temps r&eacute;el avec des contraintes hard real time. Cependant, nous pouvons voir que le patch PREEMPT_RT propose une solution plus facile &agrave; mettre en place que Xenomai et pr&eacute;sente de tr&egrave;s bonnes caract&eacute;ristiques temps r&eacute;el, qui ont vu une nette am&eacute;lioration r&eacute;cemment.</p>
+<p>&nbsp;&nbsp;&nbsp; On remarque par contre des r&eacute;sultats un peu &eacute;tonnants sur Xenomai Mercury qui affiche des performances plus faibles que ses concurrents. Encore une fois, les tests r&eacute;alis&eacute;s ne sont pas pr&eacute;cis &agrave; 100% au vu de leur dur&eacute;e et du nombre de tests r&eacute;alis&eacute;s, en raison d&rsquo;un manque de temps.</p>
+<p>Pour ce qui est de Xenomai et comment l&rsquo;impl&eacute;menter de mani&egrave;re optimale, voici en lien le wiki de Xenomai qui est tr&egrave;s bien document&eacute; :</p>
+<p><a href="https://gitlab.denx.de/Xenomai/xenomai/wikis/Start_Here">https://gitlab.denx.de/Xenomai/xenomai/wikis/Start_Here</a></p>
+<p>&nbsp;&nbsp;&nbsp; De plus, j&rsquo;ai expos&eacute; ici quelques options &agrave; activer/d&eacute;sactiver au niveau du kernel, mais la configuration optimale d&eacute;pendra de l&rsquo;architecture utilis&eacute;e et des contraintes li&eacute;es au produit. Si vous &ecirc;tes int&eacute;ress&eacute;, vous pouvez consulter le site ci-dessous d&eacute;crivant toutes les subtilit&eacute;s et les am&eacute;liorations &agrave; faire pour mettre en place du temps r&eacute;el : </p>
+<p><a href="http://linuxrealtime.org/index.php/Main_Page">http://linuxrealtime.org/index.php/Main_Page</a></p>
+<p>&nbsp;&nbsp;&nbsp; Je vous partage &eacute;galement deux vid&eacute;os int&eacute;ressantes sur le patch PREEMPT_RT :</p>
+<ul>
+<li><em>Real Time is Coming to Linux; What Does that Mean to You? &ndash; Steven Rostedt, VMware</em></li>
+</ul>
+<figure class="wp-block-embed-youtube wp-block-embed is-type-video is-provider-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio">
+<div class="wp-block-embed__wrapper">
+<iframe title="Real Time is Coming to Linux; What Does that Mean to You? - Steven Rostedt, VMware" width="1170" height="658" src="https://www.youtube.com/embed/BxJm-Ujipcg?feature=oembed" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+</figure>
+<ul>
+<li><em>Embedded Linux Conference 2013 &ndash; Inside the RT Patch </em></li>
+</ul>
+<figure class="wp-block-embed-youtube wp-block-embed is-type-video is-provider-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio">
+<div class="wp-block-embed__wrapper">
+<iframe title="Embedded Linux Conference 2013 - Inside the RT Patch" width="1170" height="658" src="https://www.youtube.com/embed/n9ucTGWrON8?feature=oembed" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+</figure>
+<ul>
+<li><em>Introduction to Realtime Linux</em></li>
+</ul>
+<figure class="wp-block-embed-youtube wp-block-embed is-type-video is-provider-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio">
+<div class="wp-block-embed__wrapper">
+<iframe title="Introduction to Realtime Linux" width="1170" height="658" src="https://www.youtube.com/embed/BKkX9WASfpI?feature=oembed" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+</figure>
+</div>
+]]></content:encoded>
+										</item>
+	</channel>
+</rss>

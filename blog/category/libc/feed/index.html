@@ -1,0 +1,759 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+<channel>
+	<title>libc &#8211; Dev-Pro Informatique</title>
+	<atom:link href="http://localhost/wordpress/category/libc/feed/" rel="self" type="application/rss+xml" />
+	<link>http://dev-pro.xyz/blog/</link>
+	<description>Solution Technologique</description>
+	<lastBuildDate>Fri, 27 Dec 2019 15:50:35 +0000</lastBuildDate>
+	<language>fr-CA</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	<generator>https://wordpress.org/?v=5.3.2</generator>
+	<item>
+		<title>Gestion de versions des bibliothèques partagées</title>
+		<link>https://dev-pro.xyz/blog/gestion-de-versions-des-bibliotheques-partagees/</link>
+				<pubDate>Fri, 27 Dec 2019 15:50:35 +0000</pubDate>
+		<dc:creator><![CDATA[siz]]></dc:creator>
+				<category><![CDATA[libc]]></category>
+		<category><![CDATA[linker]]></category>
+		<category><![CDATA[Linux]]></category>
+		<category><![CDATA[symboles]]></category>
+		<category><![CDATA[WhitePaper]]></category>
+
+		<guid isPermaLink="false">https://dev-pro.xyz/blog/gestion-de-versions-des-bibliotheques-partagees/</guid>
+				<description><![CDATA[Tout code est susceptible au changement, avec pour objectif d&#8217;ajouter des fonctionnalit&#233;s, de r&#233;soudre des BUGS ou m&#234;me d&#8217;aller jusqu&#8217;a modifier les interfaces (alt&#233;rer les prototypes des fonctions). G&#233;n&#233;ralement plus un code est utilis&#233; par la communaut&#233;, plus il est d&#233;conseill&#233; de modifier les interfaces lors d&#8217;une &#233;volution. Cependant, la r&#233;trocompatibilit&#233; reste floue pour certains ... <a href="https://dev-pro.xyz/blog/gestion-de-versions-des-bibliotheques-partagees/" class="more-link text-uppercase small"><strong>Continue Reading</strong> <i class="fa fa-angle-double-right" aria-hidden="true"></i></a>]]></description>
+								<content:encoded><![CDATA[<div>
+<p>Tout code est susceptible au changement, avec pour objectif d&rsquo;ajouter des fonctionnalit&eacute;s, de r&eacute;soudre des BUGS ou m&ecirc;me d&rsquo;aller jusqu&rsquo;a modifier les interfaces (<em>alt&eacute;rer les prototypes des fonctions</em>).</p>
+<p>G&eacute;n&eacute;ralement plus un code est utilis&eacute; par la communaut&eacute;, plus il est d&eacute;conseill&eacute; de modifier les interfaces lors d&rsquo;une &eacute;volution. Cependant, la r&eacute;trocompatibilit&eacute; reste floue pour certains d&eacute;veloppeurs surtout lors de la mise &agrave; jour des <strong>biblioth&egrave;ques partag&eacute;es</strong>.</p>
+<p>Dans cet article, nous d&eacute;couvrirons comment maintenir les biblioth&egrave;ques pour pouvoir les distribuer et les modifier sans avoir &agrave; recompiler les anciens binaires.  Ces derniers pourront ainsi b&eacute;n&eacute;ficier d&rsquo;une am&eacute;lioration de performances ou de corrections de failles de s&eacute;curit&eacute;.</p>
+<h2>Pourquoi la gestion de version des biblioth&egrave;ques?</h2>
+<p>Pour r&eacute;pondre &agrave; cette question il est important de conna&icirc;tre quelques concepts li&eacute;s aux biblioth&egrave;ques partag&eacute;es. </p>
+<h3>Quelques conventions &agrave; retenir</h3>
+<ul>
+<li>Une biblioth&egrave;que partag&eacute;e doit &ecirc;tre compil&eacute;e comme ceci :</li>
+</ul>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #996633">$ </span>gcc -Wall -fPIC -c bibliotheque_dynamique.c
+<span style="color: #996633">$ </span>gcc -shared bibliotheque_dynamique.o -o bibliotheque_dynamique.so
+</pre>
+</div>
+<p>L&rsquo;argument  &laquo;&nbsp;-shared&nbsp;&raquo; est un flag linker utilis&eacute; pour cr&eacute;er les biblioth&egrave;ques partag&eacute;es.</p>
+<p><strong>Remarque :</strong> le flag du compilateur &laquo;&nbsp;-fPIC&nbsp;&raquo; ne doit pas &ecirc;tre associ&eacute; &agrave; la cr&eacute;ation des biblioth&egrave;ques partag&eacute;es (<em>il est possible de l&rsquo;utiliser pour cr&eacute;er des biblioth&egrave;ques statiques</em>).</p>
+<ul>
+<li>Par convention, le nom d&rsquo;une biblioth&egrave;que partag&eacute;e prend la forme : <strong>lib</strong>nombibliotheque<strong>.so.&lt;M&gt;.&lt;m&gt;.&lt;p&gt;</strong> (par exemple : <em>libssl</em>.<em>so</em>.1.0.0).</li>
+</ul>
+<p><strong>N.B :</strong> les symboles <strong>M</strong>, <strong>m</strong> et <strong>p</strong> d&eacute;signent les nombres <strong>M</strong>ajeur, <strong>m</strong>ineur et <strong>p</strong>atch respectivement. Ces derniers pr&eacute;cisent l&rsquo;impact du changement de version sur le code, par exemple : la modification de la signature d&rsquo;une fonction est un changement de type majeur alors que l&rsquo;optimisation d&rsquo;un calcul dans une routine a des cons&eacute;quences mineures.</p>
+<h3>Alors pourquoi versionner?</h3>
+<p>Pour d&eacute;montrer l&rsquo;importance du versionnage, nous allons cr&eacute;er une simple biblioth&egrave;que partag&eacute;e (<em>et suivre son &eacute;volution</em>). </p>
+<h4>Exemple pratique</h4>
+<p>Pour les besoins d&rsquo;un outil de monitoring du syst&egrave;me, nous impl&eacute;mentons une biblioth&egrave;que qui permet de lister les diff&eacute;rents utilisateurs connect&eacute;s sur le syst&egrave;me.</p>
+<h4>Solution propos&eacute;e</h4>
+<p>Sous Linux, il existe deux fichiers qui se chargent de cette t&acirc;che :</p>
+<ul>
+<li><strong>/var/run/utmp :</strong> qui liste les utilisateurs connect&eacute;s (<em>utilis&eacute; par l&rsquo;utilitaire who</em>).</li>
+<li><strong>/var/log/wtmp :</strong> sauvegarde chaque connexion et d&eacute;connexion &eacute;tablie par un utilisateur (<em>utilis&eacute; par l&rsquo;utilitaire &laquo;&nbsp;last&nbsp;&raquo;</em>). </li>
+</ul>
+<h4>Premi&egrave;re release : libusrmgr.so.1.0.0</h4>
+<p><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/no_method_build_fail/libusrmgr.so.1.0.0/usrmgr.h">usrmgr.h</a> : fichier header de la biblioth&egrave;que &laquo;&nbsp;<strong>libusrmgr.so.1.0.0</strong>&nbsp;&raquo; :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include &lt;stdlib.h&gt;</span>
+<span style="color: #557799">#include &lt;utmpx.h&gt;</span>
+<span style="color: #557799">#include &lt;time.h&gt;</span>
+
+<span style="color: #888888">/* Retourne la liste des utilisateurs connect&eacute;s */</span>
+<span style="color: #333399;font-weight: bold">void</span> <span style="color: #0066BB;font-weight: bold">getLoggedUsers</span>();
+</pre>
+</div>
+<p><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/no_method_build_fail/libusrmgr.so.1.0.0/usrmgr.c">usrmgr.c :</a> impl&eacute;mentation de la biblioth&egrave;que &laquo;&nbsp;<strong>libusrmgr.so.1.0.0</strong>&nbsp;&raquo; :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "usrmgr.h"</span>
+
+<span style="color: #888888">/* Retourne la liste des utilisateurs connect&eacute;s */</span>
+<span style="color: #333399;font-weight: bold">void</span> <span style="color: #0066BB;font-weight: bold">getLoggedUsers</span>(){
+    <span style="color: #008800;font-weight: bold">struct</span> utmpx <span style="color: #333333">*</span>utmpUser;
+
+    setutxent(); <span style="color: #888888">// Ouverture du fichier /var/run/utmp</span>
+
+    <span style="color: #888888">/* Parcours de la liste des utilisateurs */</span>
+    <span style="color: #008800;font-weight: bold">while</span> ((utmpUser <span style="color: #333333">=</span> getutxent()) <span style="color: #333333">!=</span> <span style="color: #007020">NULL</span>) {
+        printf(<span style="background-color: #fff0f0">"Utilisateur : %s &lt;=&gt; PID : %ld at : %s"</span>, utmpUser<span style="color: #333333">-&gt;</span>ut_user,
+         (<span style="color: #333399;font-weight: bold">long</span>) utmpUser<span style="color: #333333">-&gt;</span>ut_pid, ctime((<span style="color: #333399;font-weight: bold">time_t</span> <span style="color: #333333">*</span>) <span style="color: #333333">&amp;</span>(utmpUser<span style="color: #333333">-&gt;</span>ut_tv.tv_sec)));
+    }
+}
+</pre>
+</div>
+<p><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/lib_build_ko/old_binary/oldBinary.c">premierBinaire.c :</a> binaire client (qui va utiliser notre biblioth&egrave;que partag&eacute;e).</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "usrmgr.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">main</span>(){
+    printf(<span style="background-color: #fff0f0">"La liste des utilisateurs connect&eacute;s : </span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>);
+    getLoggedUsers();
+
+    <span style="color: #008800;font-weight: bold">return</span> EXIT_SUCCESS;
+}
+</pre>
+</div>
+<p>Il ne reste plus qu&rsquo;&agrave; r&eacute;aliser la compilation et le test :</p>
+<ul>
+<li>Compiler une biblioth&egrave;que partag&eacute;e :</li>
+</ul>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #996633">$ </span>gcc -Wall -fPIC -c usrmgr.c
+<span style="color: #996633">$ </span>gcc -shared usrmgr.o -o libusrmgr.so.1.0.0
+</pre>
+</div>
+<ul>
+<li>Compiler le binaire et tester l&rsquo;ex&eacute;cution :</li>
+</ul>
+<ul class="wp-block-gallery aligncenter columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/users_listed.png" alt="" data-id="6876" data-link="http://www.linuxembedded.fr/?attachment_id=6876" class="wp-image-6876 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/users_listed.png 746w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/users_listed-300x74.png 300w" sizes="(max-width: 746px) 100vw, 746px"></figure>
+</li>
+</ul>
+<h4>Deuxi&egrave;me release : libusrmgr.so.2.0.0</h4>
+<p>Au fil du temps, on se rend compte des besoins suivants :</p>
+<ul>
+<li>Le fichier utmp (<em>ouvert avec setutxent()</em>) n&rsquo;est pas ferm&eacute; apr&egrave;s avoir obtenu la liste des utilisateurs (<em>l&rsquo;ancien binaire doit b&eacute;n&eacute;ficier de cette mise &agrave; jour</em>).</li>
+<li>Pour des raisons de s&eacute;curit&eacute;, l&rsquo;utilisateur &laquo;&nbsp;Pierre&nbsp;&raquo; ne doit pas &ecirc;tre affich&eacute; (<em>l&rsquo;ancien binaire doit b&eacute;n&eacute;ficier de cette mise &agrave; jour</em>).</li>
+<li>La fonction <strong>getLoggedUsers</strong>() doit retourner le nombre d&rsquo;utilisateurs. Pour cela l&rsquo;ABI de la fonction doit changer (<em>obligation de passer &agrave; la version 2.0.0 de la biblioth&egrave;que</em>).</li>
+<li>Introduire la possibilit&eacute; de filtrer sur un seul utilisateur.</li>
+</ul>
+<p>Avec ce simple exemple, on se retrouve contraint de maintenir plusieurs versions de la biblioth&egrave;que, ce qui n&rsquo;est pas possible (<em>les anciens binaires ne vont b&eacute;n&eacute;ficier d&rsquo;aucune mise &agrave; jour</em>). </p>
+<p>La prochaine release (<em>incompatible avec l&rsquo;ancien binaire</em>) sera comme ceci :</p>
+<p><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/no_method_build_fail/libusrmgr.so.2.0.0/usrmgr.h">usrmgr.h :</a> fichier header de la biblioth&egrave;que &laquo;&nbsp;<strong>libusrmgr.so.2.0.0</strong>&nbsp;&raquo; :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include &lt;stdlib.h&gt;</span>
+<span style="color: #557799">#include &lt;utmpx.h&gt;</span>
+<span style="color: #557799">#include &lt;time.h&gt;</span>
+<span style="color: #557799">#include &lt;string.h&gt;</span>
+
+<span style="color: #557799">#define HIDDEN_USER "Pierre"</span>
+
+<span style="color: #888888">/* Affiche et retourne le nombre des utilisateurs connect&eacute;s */</span>
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">getLoggedUsers</span>(<span style="color: #333399;font-weight: bold">char</span> filterUser[]);
+</pre>
+</div>
+<p><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/no_method_build_fail/libusrmgr.so.2.0.0/usrmgr.c">usrmgr.c :</a> impl&eacute;mentation de la biblioth&egrave;que &laquo;&nbsp;<strong>libusrmgr.so.2.0.0</strong>&nbsp;&raquo; :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "usrmgr.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">getLoggedUsers</span>(<span style="color: #333399;font-weight: bold">char</span> filterUser[]){
+    <span style="color: #333399;font-weight: bold">int</span> usr_nb <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+    <span style="color: #008800;font-weight: bold">struct</span> utmpx <span style="color: #333333">*</span>utmpUser;
+    setutxent(); <span style="color: #888888">// Ouverture du fichier /var/run/utmp</span>
+
+    <span style="color: #888888">/* Parcours de la liste des utilisateurs */</span>
+    <span style="color: #008800;font-weight: bold">while</span> ((utmpUser <span style="color: #333333">=</span> getutxent()) <span style="color: #333333">!=</span> <span style="color: #007020">NULL</span>) {
+        <span style="color: #008800;font-weight: bold">if</span>(strcmp(utmpUser<span style="color: #333333">-&gt;</span>ut_user, HIDDEN_USER) <span style="color: #333333">==</span> <span style="color: #0000DD;font-weight: bold">0</span>){
+            <span style="color: #888888">// Reprendre au d&eacute;but de la boucle pour ne pas inclure l'utilisateur.</span>
+            <span style="color: #008800;font-weight: bold">continue</span>;
+        }
+        usr_nb<span style="color: #333333">++</span>;
+        <span style="color: #008800;font-weight: bold">if</span>(strcmp(utmpUser<span style="color: #333333">-&gt;</span>ut_user,filterUser) <span style="color: #333333">==</span> <span style="color: #0000DD;font-weight: bold">0</span>){ <span style="color: #888888">// Si filtre utilisateur</span>
+             printf(<span style="background-color: #fff0f0">"Filtre utilisateur : %s &lt;=&gt; PID : %ld at : %s est connect&eacute;!</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>,
+                utmpUser<span style="color: #333333">-&gt;</span>ut_user, (<span style="color: #333399;font-weight: bold">long</span>) utmpUser<span style="color: #333333">-&gt;</span>ut_pid,
+                ctime((<span style="color: #333399;font-weight: bold">time_t</span> <span style="color: #333333">*</span>) <span style="color: #333333">&amp;</span>(utmpUser<span style="color: #333333">-&gt;</span>ut_tv.tv_sec)));
+            <span style="color: #008800;font-weight: bold">break</span>;
+        } <span style="color: #008800;font-weight: bold">else</span> <span style="color: #008800;font-weight: bold">if</span>(strcmp(filterUser,<span style="background-color: #fff0f0">""</span>) <span style="color: #333333">==</span> <span style="color: #0000DD;font-weight: bold">0</span>){
+             printf(<span style="background-color: #fff0f0">"Utilisateur : %s &lt;=&gt; PID : %ld at : %s</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, utmpUser<span style="color: #333333">-&gt;</span>ut_user,
+                (<span style="color: #333399;font-weight: bold">long</span>) utmpUser<span style="color: #333333">-&gt;</span>ut_pid, ctime((<span style="color: #333399;font-weight: bold">time_t</span> <span style="color: #333333">*</span>) <span style="color: #333333">&amp;</span>(utmpUser<span style="color: #333333">-&gt;</span>ut_tv.tv_sec)));
+        }
+    }
+
+    endutxent(); <span style="color: #888888">// Fermer le fichier /var/run/utmp</span>
+    <span style="color: #008800;font-weight: bold">return</span> usr_nb;
+}
+</pre>
+</div>
+<p><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/no_method_build_fail/libusrmgr.so.2.0.0/deuxiemeBinaire.c">deuxiemeBinaire.c :</a> le binaire doit &ecirc;tre mis &agrave; jour comme ceci :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "usrmgr.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">main</span>(){
+    printf(<span style="background-color: #fff0f0">"La liste des utilisateurs connect&eacute;s : </span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>);
+    getLoggedUsers(<span style="background-color: #fff0f0">""</span>);
+
+    printf(<span style="background-color: #fff0f0">"</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">Filtrer sur l'utilisateur 'jugurtha' : </span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>);
+    getLoggedUsers(<span style="background-color: #fff0f0">"jugurtha"</span>);
+
+    <span style="color: #008800;font-weight: bold">return</span> EXIT_SUCCESS;
+}
+</pre>
+</div>
+<p>La compilation et l&rsquo;ex&eacute;cution du nouveau binaire sont r&eacute;alis&eacute;es comme suit :</p>
+<ul class="wp-block-gallery aligncenter columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/library_fail_to.png" alt="" data-id="7052" data-link="https://www.linuxembedded.fr/?attachment_id=7052" class="wp-image-7052 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/library_fail_to.png 798w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/library_fail_to-300x148.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/library_fail_to-768x378.png 768w" sizes="(max-width: 798px) 100vw, 798px"></figure>
+</li>
+</ul>
+<p>Il est temps d&rsquo;essayer d&rsquo;ex&eacute;cuter l&rsquo;ancien binaire (<em>qu&rsquo;il faut copier dans le r&eacute;pertoire ou se trouve libusrmgr.so.2.0.0</em>) avec la nouvelle biblioth&egrave;que :</p>
+<ul class="wp-block-gallery aligncenter columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/failed_to_load_previous_lib.png" alt="" data-id="7053" data-link="https://www.linuxembedded.fr/?attachment_id=7053" class="wp-image-7053 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/failed_to_load_previous_lib.png 797w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/failed_to_load_previous_lib-300x24.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/failed_to_load_previous_lib-768x61.png 768w" sizes="(max-width: 797px) 100vw, 797px"></figure>
+</li>
+</ul>
+<div style="text-align:center;background-color:#6DD5FA11;padding : 2px">
+<h3 style="text-align:center;font-weight:bold">Important</h3>
+<p>L&rsquo;utilitaire <strong>ldd</strong> permet de lister les biblioth&egrave;ques import&eacute;es par une application. Voici le r&eacute;sultat de la commande sur nos deux programmes :
+</p>
+<div style="text-align:center">
+<figure class="wp-block-image"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/ldd_shows_lib_failure.png" alt="" class="wp-image-7073 img-fluid" width="95%" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/ldd_shows_lib_failure.png 804w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/ldd_shows_lib_failure-300x81.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/ldd_shows_lib_failure-768x206.png 768w" sizes="(max-width: 804px) 100vw, 804px"></figure>
+</div>
+<p>On peut voir clairement que le chemin vers la biblioth&egrave;que &laquo;&nbsp;libusrmgr.so.1.0.0&nbsp;&raquo; n&rsquo;est pas <br />r&eacute;solu (<em>pour le premier binaire</em>). </p>
+</div>
+<p style="text-align:center"><span style="color:red">C&rsquo;est cela qu&rsquo;on appelle le probl&egrave;me de version des biblioth&egrave;ques partag&eacute;es. </span><strong>Une notion m&eacute;connue de certains d&eacute;veloppeurs.</strong></p>
+<h2>G&eacute;rer le versionnement de ses biblioth&egrave;ques</h2>
+<p>Il existe deux m&eacute;thodes tr&egrave;s appr&eacute;ci&eacute;es en pratique :</p>
+<ul>
+<li><strong>M&eacute;thode du lien symbolique de type &laquo;&nbsp;soname&nbsp;&raquo; :</strong> se limite aux changements mineurs et aux patchs (<em>donc les nombres mineur et patch d&rsquo;une version d&rsquo;une biblioth&egrave;que</em>).</li>
+<li><strong>M&eacute;thode &laquo;&nbsp;gestion de symboles&nbsp;&raquo; :</strong> plus puissante (<em>et un peu plus complexe</em>) que la pr&eacute;c&eacute;dente mais permet de g&eacute;rer tout type de changement en gardant une r&eacute;trocompabilit&eacute; irr&eacute;prochable (<em>r&eacute;siste m&ecirc;me au changement de l&rsquo;ABI et des interfaces</em>). C&rsquo;est cette m&eacute;thode qu&rsquo;utilise la fameuse biblioth&egrave;que <a href="https://akkadia.org/drepper/symbol-versioning">glibc</a>.</li>
+</ul>
+<h3>La m&eacute;thode du lien type &laquo;&nbsp;soname&nbsp;&raquo;</h3>
+<p>Cette m&eacute;thode part du principe de r&eacute;duction des informations de versionnage qui apparaissent dans le nom des biboth&egrave;ques partag&eacute;es.</p>
+<p>Pour cela le binaire est compil&eacute; avec un lien symbolique interm&eacute;diaire (<em>appel&eacute; le lien &laquo;&nbsp;soname&nbsp;&raquo;</em>) qui ne contient que le nombre majeur comme information de versionnage (<em>qui lui m&ecirc;me fait r&eacute;f&eacute;rence &agrave; la vraie biblioth&egrave;que</em>). La figure suivante illustre le processus :</p>
+<ul class="wp-block-gallery columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/soname-1.png" alt="" data-id="6821" data-link="http://www.linuxembedded.fr/?attachment_id=6821" class="wp-image-6821 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/soname-1.png 881w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/soname-1-300x157.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/soname-1-768x403.png 768w" sizes="(max-width: 881px) 100vw, 881px"></figure>
+</li>
+</ul>
+<p>Comme le montre clairement le sch&eacute;ma pr&eacute;c&eacute;dent, plus besoin de recompiler le binaire pour r&eacute;f&eacute;rencer la nouvelle version de la biblioth&egrave;que. On peut encore aller plus loin, un lien symbolique (<em>optionnel mais recommand&eacute; par convention</em>) peut &ecirc;tre ins&eacute;r&eacute; entre le binaire et le lien symbolique de type soname. Cela permet de compiler le binaire d&rsquo;une mani&egrave;re g&eacute;n&eacute;rique : <code>$ gcc -ltestbiblio</code> &hellip; &agrave; la place de <code>$ gcc -l:libtestbiblio.so.1.</code></p>
+<p>Le sch&eacute;ma final qui d&eacute;crit la m&eacute;thode soname est le suivant :</p>
+<ul class="wp-block-gallery columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/09/soname-based_method-1.png" alt="" data-id="6824" data-link="http://www.linuxembedded.fr/?attachment_id=6824" class="wp-image-6824 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/09/soname-based_method-1.png 976w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/soname-based_method-1-300x197.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/09/soname-based_method-1-768x504.png 768w" sizes="(max-width: 976px) 100vw, 976px"></figure>
+</li>
+</ul>
+<p>Ce qui fait maintenant que tous les binaires (<em>tant que le nombre majeur n&rsquo;est pas chang&eacute;</em>) peuvent fonctionner avec la nouvelle biblioth&egrave;que sans avoir &agrave; les recompiler.</p>
+<h4>Exemple 1 : release de la biblioth&egrave;que libfilemanager.so.1.0.0</h4>
+<p>Nous prendrons comme exemple une simple biblioth&egrave;que qui affiche les statistiques d&rsquo;un fichier.</p>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/soname_method/libfilemanager.so.1.0.0/filemanager.h">filemanager.h</a> :</strong> header de la biblioth&egrave;que <strong>&laquo;&nbsp;libfilemanager.so.1.0.0&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;sys/types.h&gt;</span>
+<span style="color: #557799">#include &lt;sys/stat.h&gt;</span>
+<span style="color: #557799">#include &lt;unistd.h&gt;</span>
+<span style="color: #557799">#include &lt;stdio.h&gt;</span>
+
+<span style="color: #333399;font-weight: bold">void</span> <span style="color: #0066BB;font-weight: bold">getFileStats</span>(<span style="color: #008800;font-weight: bold">const</span> <span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> filePath);
+</pre>
+</div>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/soname_method/libfilemanager.so.1.0.0/filemanager.c">filemanager.c</a> :</strong> impl&eacute;mentation de la biblioth&egrave;que <strong>&laquo;&nbsp;filemanager.so.1.0.0&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "filemanager.h"</span>
+
+<span style="color: #333399;font-weight: bold">void</span> <span style="color: #0066BB;font-weight: bold">getFileStats</span>(<span style="color: #008800;font-weight: bold">const</span> <span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> filePath){
+    <span style="color: #008800;font-weight: bold">struct</span> stat fileStat;
+    <span style="color: #333399;font-weight: bold">int</span> fileError <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+    
+    fileError <span style="color: #333333">=</span> stat(filePath, <span style="color: #333333">&amp;</span>fileStat);
+
+    <span style="color: #008800;font-weight: bold">if</span>(fileError <span style="color: #333333">&lt;</span> <span style="color: #0000DD;font-weight: bold">0</span>){
+        perror(<span style="background-color: #fff0f0">"erreur fonction stat"</span>);
+        <span style="color: #008800;font-weight: bold">return</span>;
+    }
+    <span style="color: #888888">// Check if the provided file is a regular file</span>
+    <span style="color: #008800;font-weight: bold">if</span>((fileStat.st_mode <span style="color: #333333">&amp;</span> S_IFMT) <span style="color: #333333">==</span> S_IFREG)
+        printf(<span style="background-color: #fff0f0">"Nom du Fichier %s =&gt; Taille : %ld bytes</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, filePath, fileStat.st_size);
+    <span style="color: #008800;font-weight: bold">else</span>
+        printf(<span style="background-color: #fff0f0">"Le fichier n'est pas de type S_IFREG</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>);
+}
+</pre>
+</div>
+<p>La compilation et la cr&eacute;ation du lien symbolique doivent se faire comme ceci :</p>
+<ul class="wp-block-gallery aligncenter columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/08/soname_compilation-1.png" alt="" data-id="6708" data-link="http://www.linuxembedded.fr/?attachment_id=6708" class="wp-image-6708 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/08/soname_compilation-1.png 878w, https://www.linuxembedded.fr/wp-content/uploads/2019/08/soname_compilation-1-300x32.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/08/soname_compilation-1-768x83.png 768w" sizes="(max-width: 878px) 100vw, 878px"></figure>
+</li>
+</ul>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/soname_method/libfilemanager.so.1.0.0/premierClient.c">premierClient.c :</a></strong> impl&eacute;mentation du binaire client <strong>&laquo;&nbsp;premierClient&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "filemanager.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">main</span>(<span style="color: #333399;font-weight: bold">int</span> argc, <span style="color: #333399;font-weight: bold">char</span> <span style="color: #333333">*</span>argv[]){
+    
+    <span style="color: #008800;font-weight: bold">if</span>(argc <span style="color: #333333">&lt;</span><span style="color: #0000DD;font-weight: bold">2</span>){
+        printf(<span style="background-color: #fff0f0">"Usage : %s &lt;Nom_Fichier&gt;</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, argv[<span style="color: #0000DD;font-weight: bold">0</span>]);
+        <span style="color: #008800;font-weight: bold">return</span> <span style="color: #0000DD;font-weight: bold">1</span>;    
+    }
+    <span style="color: #888888">// Get file statistics        </span>
+    getFileStats(argv[<span style="color: #0000DD;font-weight: bold">1</span>]);
+
+    <span style="color: #008800;font-weight: bold">return</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+}
+</pre>
+</div>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/08/soname_client_compilation_mode.png" alt="" class="wp-image-6710 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/08/soname_client_compilation_mode.png 879w, https://www.linuxembedded.fr/wp-content/uploads/2019/08/soname_client_compilation_mode-300x54.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/08/soname_client_compilation_mode-768x137.png 768w" sizes="(max-width: 879px) 100vw, 879px"></figure>
+</div>
+<h4>Exemple 2 : release de la biblioth&egrave;que libfilemanager.so.1.1.0</h4>
+<p>Apr&egrave;s quelque temps, on se rend compte qu&rsquo;il est n&eacute;cessaire d&rsquo;avoir une fonction pour lister les fichiers contenus dans un dossier, on doit introduire l&rsquo;interface <strong>&laquo;&nbsp;getFilesInFolder</strong>&nbsp;&raquo; et faire une nouvelle release <strong>&laquo;&nbsp;libfilemanager.so.1.1.0&nbsp;&raquo;</strong>.</p>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/soname_method/libfilemanager.so.1.1.0/filemanager.h">filemanager.h :</a></strong> header de la biblioth&egrave;que <strong>&laquo;&nbsp;libfilemanager.so.1.1.0&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;sys/types.h&gt;</span>
+<span style="color: #557799">#include &lt;sys/stat.h&gt;</span>
+<span style="color: #557799">#include &lt;unistd.h&gt;</span>
+<span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include &lt;dirent.h&gt;</span>
+
+<span style="color: #333399;font-weight: bold">void</span> <span style="color: #0066BB;font-weight: bold">getFileStats</span>(<span style="color: #008800;font-weight: bold">const</span> <span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> filePath);
+
+<span style="color: #333399;font-weight: bold">void</span> <span style="color: #0066BB;font-weight: bold">getFilesInFolder</span>(<span style="color: #008800;font-weight: bold">const</span> <span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> folderPath);
+</pre>
+</div>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/soname_method/libfilemanager.so.1.1.0/filemanager.c">filemanager.c :</a></strong> impl&eacute;mentation de la biblioth&egrave;que <strong>&laquo;&nbsp;filemanager.so.1.1.0&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "filemanager.h"</span>
+
+<span style="color: #333399;font-weight: bold">void</span> <span style="color: #0066BB;font-weight: bold">getFileStats</span>(<span style="color: #008800;font-weight: bold">const</span> <span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> filePath){
+    <span style="color: #008800;font-weight: bold">struct</span> stat fileStat;
+    <span style="color: #333399;font-weight: bold">int</span> fileError <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+    
+    fileError <span style="color: #333333">=</span> stat(filePath, <span style="color: #333333">&amp;</span>fileStat);
+
+    <span style="color: #008800;font-weight: bold">if</span>(fileError <span style="color: #333333">&lt;</span> <span style="color: #0000DD;font-weight: bold">0</span>){
+        perror(<span style="background-color: #fff0f0">"erreur fonction stat"</span>);
+        <span style="color: #008800;font-weight: bold">return</span>;
+    }
+    <span style="color: #888888">// Check if the provided file is a regular file</span>
+    <span style="color: #008800;font-weight: bold">if</span>((fileStat.st_mode <span style="color: #333333">&amp;</span> S_IFMT) <span style="color: #333333">==</span> S_IFREG)
+        printf(<span style="background-color: #fff0f0">"Nom du Fichier %s =&gt; Taille : %ld bytes</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, filePath, fileStat.st_size);
+    <span style="color: #008800;font-weight: bold">else</span>
+        printf(<span style="background-color: #fff0f0">"Le fichier n'est pas de type S_IFREG</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>);
+}
+
+<span style="color: #333399;font-weight: bold">void</span> <span style="color: #0066BB;font-weight: bold">getFilesInFolder</span>(<span style="color: #008800;font-weight: bold">const</span> <span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> folderPath){
+    <span style="color: #333399;font-weight: bold">DIR</span><span style="color: #333333">*</span> folder <span style="color: #333333">=</span> <span style="color: #007020">NULL</span>;
+    <span style="color: #008800;font-weight: bold">struct</span> dirent<span style="color: #333333">*</span> fileToRead <span style="color: #333333">=</span> <span style="color: #007020">NULL</span>;
+    <span style="color: #333399;font-weight: bold">int</span> fileCounter <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+
+    folder <span style="color: #333333">=</span> opendir(folderPath); <span style="color: #888888">// open folder</span>
+
+    <span style="color: #008800;font-weight: bold">if</span> (folder <span style="color: #333333">==</span> <span style="color: #007020">NULL</span>){
+        perror(<span style="background-color: #fff0f0">"Fonction opendir"</span>);
+        <span style="color: #008800;font-weight: bold">return</span>;
+    }
+    
+    <span style="color: #008800;font-weight: bold">while</span> ((fileToRead <span style="color: #333333">=</span> readdir(folder)) <span style="color: #333333">!=</span> <span style="color: #007020">NULL</span>){
+        fileCounter<span style="color: #333333">++</span>;
+        <span style="color: #888888">// display discovered files</span>
+        printf(<span style="background-color: #fff0f0">"%d - %s</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, fileCounter, fileToRead<span style="color: #333333">-&gt;</span>d_name);
+    }
+
+    closedir(folder);
+}
+</pre>
+</div>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/soname_method/libfilemanager.so.1.1.0/dexiemeClient.c">deuxiemeClient.c :</a></strong> impl&eacute;mentation du binaire client <strong>&laquo;&nbsp;deuxiemeClient&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "filemanager.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">main</span>(<span style="color: #333399;font-weight: bold">int</span> argc, <span style="color: #333399;font-weight: bold">char</span> <span style="color: #333333">*</span>argv[]){
+    
+    <span style="color: #008800;font-weight: bold">if</span>(argc <span style="color: #333333">&lt;</span><span style="color: #0000DD;font-weight: bold">2</span>){
+        printf(<span style="background-color: #fff0f0">"Usage : %s &lt;Nom_Dossier&gt;</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, argv[<span style="color: #0000DD;font-weight: bold">0</span>]);
+        <span style="color: #008800;font-weight: bold">return</span> <span style="color: #0000DD;font-weight: bold">1</span>;
+    }
+            
+    getFilesInFolder(argv[<span style="color: #0000DD;font-weight: bold">1</span>]);
+
+    <span style="color: #008800;font-weight: bold">return</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+}
+</pre>
+</div>
+<ul>
+<li>Supprimer l&rsquo;ancien lien symbolique :</li>
+</ul>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #996633">$ </span>rm -rf libfilemanager.so
+</pre>
+</div>
+<ul>
+<li>Recompiler la biblioth&egrave;que et cr&eacute;er un nouveau lien de type &laquo;&nbsp;soname&nbsp;&raquo; comme d&eacute;crit pr&eacute;c&eacute;demment (<em>exemple 1</em>). </li>
+</ul>
+<ul>
+<li>Compiler le binaire client :</li>
+</ul>
+<ul class="wp-block-gallery aligncenter columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/soname_name_method_minor_number.png" alt="" data-id="7054" data-link="https://www.linuxembedded.fr/?attachment_id=7054" class="wp-image-7054 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/soname_name_method_minor_number.png 757w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/soname_name_method_minor_number-300x134.png 300w" sizes="(max-width: 757px) 100vw, 757px"></figure>
+</li>
+</ul>
+<p><strong>N.B :</strong> L&rsquo;ancien binaire ne sera pas affect&eacute; par les changements, le loader va toujours charger libfilemanager.so.1 (<em>qui pointe d&eacute;sormais sur libfilemanager.1.1.0</em>) comme le montre la figure ci-dessous : </p>
+<figure class="wp-block-image"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/soname_backward_compatible.png" alt="" class="wp-image-7055 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/soname_backward_compatible.png 757w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/soname_backward_compatible-300x185.png 300w" sizes="(max-width: 757px) 100vw, 757px"></figure>
+<p>La m&eacute;thode <strong>&laquo;&nbsp;soname&nbsp;&raquo;</strong> nous a permis en toute facilit&eacute; d&rsquo;apporter des modifications &agrave; notre bilbioth&egrave;que, le tout en restant compatible avec l&rsquo;ancien binaire.</p>
+<h3>La m&eacute;thode &laquo;&nbsp;gestion de symboles&nbsp;&raquo;</h3>
+<p>Cette m&eacute;thode est plus puissante et plus compl&egrave;te que la pr&eacute;c&eacute;dente (<em>elle est</em> <em>d&rsquo;ailleurs utilis&eacute;e par glibc depuis la version 2.6</em>). En effet, les changements ne sont pas restreints au nombre mineur (<em>et nombre patch</em>) d&rsquo;une biblioth&egrave;que.<br />La m&eacute;thode &laquo;&nbsp;gestion de symboles&nbsp;&raquo; s&rsquo;appuie aussi sur la m&eacute;thode du lien du type &laquo;&nbsp;soname&nbsp;&raquo; en garantissant une r&eacute;trocompatibilit&eacute; ant&eacute;rieure pour tout type de modifications.<br />Le sch&eacute;ma vu pr&eacute;c&eacute;demment peut &ecirc;tre red&eacute;fini comme suit :</p>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/10/soname-based_method-2.png" alt="" class="wp-image-6986 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/10/soname-based_method-2.png 976w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/soname-based_method-2-300x197.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/soname-based_method-2-768x504.png 768w" sizes="(max-width: 976px) 100vw, 976px"></figure>
+</div>
+<p><strong>N.B :</strong> il n&rsquo;est plus n&eacute;c&eacute;ssaire d&rsquo;avoir un lien symbolique (<em>entre le binaire et le lien de type &laquo;&nbsp;soname&nbsp;&raquo;</em>) car le nom du lien type &laquo;&nbsp;soname&nbsp;&raquo; ne contient plus le nombre majeur.</p>
+<p>La m&eacute;thode &laquo;&nbsp;gestion de symboles&nbsp;&raquo; introduit deux briques suppl&eacute;mentaires pour combler les limitations de la m&eacute;thode du lien type &laquo;&nbsp;soname&nbsp;&raquo; :</p>
+<ul>
+<li><strong>Le gestionnaire de version &laquo;&nbsp;linker script&nbsp;&raquo; :</strong> fichier pars&eacute; par le linker; ce dernier d&eacute;crit les fonctions, leurs versions (<em>en indiquant la version &agrave; utiliser pour les anciennes et les prochaines versions de la biblioth&egrave;que</em>) et  leur visibilit&eacute; (<em>les fonctions &agrave; exporter au binaire du client</em>).<br /><strong>N.B :</strong> le gestionnaire de version est suffisant pour g&eacute;rer les changements sur les nombres mineur et patch.</li>
+<li><strong>la directive &laquo;&nbsp;.symver&nbsp;&raquo; (<em>directive support&eacute;e par GCC</em>) :</strong> utilis&eacute;e lors d&rsquo;une alt&eacute;ration du prototype d&rsquo;une fonction (<em>incluant une mise &agrave; jour du nombre majeur de la biblioth&egrave;que</em>).<br /><strong>N.B :</strong> cette directive n&rsquo;est introduite que lors d&rsquo;un changement de la d&eacute;finition des interfaces (<em>c&rsquo;est &agrave; dire la mise &agrave; jour du nombre majeur</em>).</li>
+</ul>
+<p>Comme dans le cas des parties pr&eacute;c&eacute;dentes, nous partirons sur un exemple qui va &eacute;voluer au fur et &agrave; mesure.</p>
+<h4>Exemple 1 : premi&egrave;re release de la biblioth&egrave;que libnbgenerator.so.1.0.0</h4>
+<p>Pour les besoins d&rsquo;une gestion de mot de passe, nous impl&eacute;mentons une biblioth&egrave;que qui peut g&eacute;n&eacute;rer des nombres pseudo-al&eacute;atoires. </p>
+<p>Une simple impl&eacute;mentation peut &ecirc;tre la suivante :</p>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/first_client/nbgenerator.h">nbgenerator.h :</a></strong> header de la biblioth&egrave;que <strong>&laquo;&nbsp;libnbgenerator.so.1.0.0&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include &lt;stdlib.h&gt;</span>
+<span style="color: #557799">#include &lt;time.h&gt;</span>
+
+<span style="color: #557799">#define DEFAULT_MAX_NUMBER_LIMIT 1000</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">getPseudoNumber</span>(<span style="color: #333399;font-weight: bold">int</span> numLimit);
+</pre>
+</div>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/first_client/nbgenerator.c">nbgenerator.c :</a></strong> impl&eacute;mentation de la biblioth&egrave;que &laquo;&nbsp;<strong>libnbgenerator.so.1.0.0</strong>&nbsp;&raquo; :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "nbgenerator.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">getPseudoNumber</span>(<span style="color: #333399;font-weight: bold">int</span> numLimit){
+    <span style="color: #333399;font-weight: bold">int</span> rNumber <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+    srand(time(<span style="color: #007020">NULL</span>));
+    <span style="color: #008800;font-weight: bold">if</span>(numLimit <span style="color: #333333">&gt;</span> <span style="color: #0000DD;font-weight: bold">0</span>)
+        rNumber <span style="color: #333333">=</span> rand() <span style="color: #333333">%</span> numLimit;
+    <span style="color: #008800;font-weight: bold">else</span>
+        rNumber <span style="color: #333333">=</span> rand() <span style="color: #333333">%</span> DEFAULT_MAX_NUMBER_LIMIT;
+    <span style="color: #008800;font-weight: bold">return</span> rNumber;
+}
+</pre>
+</div>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/first_client/script_version">script_version :</a></strong> et enfin le &laquo;&nbsp;linker script&nbsp;&raquo; pour assister le linker &agrave; la cr&eacute;ation d&rsquo;une biblioth&egrave;que conforme &agrave; la m&eacute;thode &laquo;&nbsp;gestion de symboles&nbsp;&raquo;. Dans ce cas, il indique que seul <strong>getPseudoNumber</strong> sera export&eacute; et vu par le binaire du client.</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%">NBGENERATOR_1.0<span style="color: #333333">{</span>
+    <span style="color: #007020">global</span>:
+        getPseudoNumber;
+    <span style="color: #007020">local</span>:
+        *;
+<span style="color: #333333">}</span>;
+</pre>
+</div>
+<p><strong>N.B :</strong> g&eacute;n&eacute;ralement il est n&rsquo;est pas n&eacute;cessaire d&rsquo;inclure le nombre patch dans le &laquo;&nbsp;linker script&nbsp;&raquo; car ce genre de changement n&rsquo;impacte pas la r&eacute;trocompatibilit&eacute; (<em>NBGENERATOR_1.0 n&rsquo;est qu&rsquo;un symbole dans l&rsquo;ent&ecirc;te de la biblioth&egrave;que comme on verra par la suite</em>) ; cependant, on peut tr&egrave;s bien &eacute;crire <strong>NBGENERATOR_1.0.0</strong>.</p>
+<p>la compilation de la biblioth&egrave;que se fera de la mani&egrave;re suivante :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%">PC@PC ~ <span style="color: #996633">$ </span>gcc -Wall -fPIC -c nbgenerator.c
+PC@PC ~ <span style="color: #996633">$ </span>gcc -shared nbgenerator.o -Wl,-soname,libnbgenerator.so -Wl,--version-script,script_version -o libnbgenerator.so.1.0.0
+PC@PC ~ <span style="color: #996633">$ </span>ldconfig -n .
+</pre>
+</div>
+<p><strong>Remarque :</strong> Il est obligatoire de passer &laquo;&nbsp;-Wl, option&nbsp;&raquo; comme option de compilation pour modifier le comportement du linker (<em>pour tenir compte du fichier de version &laquo;&nbsp;linker script&nbsp;&raquo;</em>).</p>
+<p>Gr&acirc;ce au &laquo;&nbsp;linker script&nbsp;&raquo;, le linker ins&egrave;re 3 sections dans l&rsquo;ent&ecirc;te de la biblioth&egrave;que comme le montre la figure suivante :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #996633">$ </span>readelf -V nbgenerator.so
+
+Version symbols section <span style="background-color: #fff0f0">'.gnu.version'</span> contains 12 entries:
+ Addr: 00000000000003f2  Offset: 0x0003f2  Link: 3 <span style="color: #333333">(</span>.dynsym<span style="color: #333333">)</span>
+  000:   0 <span style="color: #333333">(</span>*local*<span style="color: #333333">)</span>       0 <span style="color: #333333">(</span>*local*<span style="color: #333333">)</span>       0 <span style="color: #333333">(</span>*local*<span style="color: #333333">)</span>       3 <span style="color: #333333">(</span>GLIBC_2.2.5<span style="color: #333333">)</span>
+  004:   0 <span style="color: #333333">(</span>*local*<span style="color: #333333">)</span>       3 <span style="color: #333333">(</span>GLIBC_2.2.5<span style="color: #333333">)</span>   0 <span style="color: #333333">(</span>*local*<span style="color: #333333">)</span>       0 <span style="color: #333333">(</span>*local*<span style="color: #333333">)</span>    
+  008:   3 <span style="color: #333333">(</span>GLIBC_2.2.5<span style="color: #333333">)</span>   3 <span style="color: #333333">(</span>GLIBC_2.2.5<span style="color: #333333">)</span>   2 <span style="color: #333333">(</span>NBGENERATOR_1.0<span style="color: #333333">)</span>     2 <span style="color: #333333">(</span>NBGENERATOR_1.0<span style="color: #333333">)</span>  
+
+Version definition section <span style="background-color: #fff0f0">'.gnu.version_d'</span> contains 2 entries:
+  Addr: 0x0000000000000410  Offset: 0x000410  Link: 4 <span style="color: #333333">(</span>.dynstr<span style="color: #333333">)</span>  000000: Rev: 1  Flags: BASE   Index: 1  Cnt: 1  Name: nbgenerator.so
+  0x001c: Rev: 1  Flags: none  Index: 2  Cnt: 1  Name: NBGENERATOR_1.0
+  Version definition past end of section
+
+Version needs section <span style="background-color: #fff0f0">'.gnu.version_r'</span> contains 1 entries:
+ Addr: 0x0000000000000448  Offset: 0x000448  Link: 4 <span style="color: #333333">(</span>.dynstr<span style="color: #333333">)</span>
+  000000: Version: 1  File: libc.so.6  Cnt: 1
+  0x0010:   Name: GLIBC_2.2.5  Flags: none  Version: 3
+</pre>
+</div>
+<ul>
+<li><strong>.gnu.version :</strong> contient les informations de version globale.</li>
+<li><strong>.gnu.version_d :</strong> affiche les informations de version relative &agrave; cette biblioth&egrave;que.</li>
+<li><strong>.gnu.version_r :</strong> permet de suivre les informations de version relatives aux biblioth&egrave;ques r&eacute;f&eacute;renc&eacute;es par cette biblioth&egrave;que.</li>
+</ul>
+<p><strong>N.B :</strong> ces champs li&eacute;s &agrave; la version seront recopi&eacute;s dans le binaire du client lors de la compilation, ce qui permettra au loader de charger les bonnes versions de fonctions adapt&eacute;es pour chaque binaire.</p>
+<p>La biblioth&egrave;que est pr&ecirc;te, il ne reste plus qu&rsquo;&agrave; cr&eacute;er un client pour l&rsquo;exploiter.</p>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/first_client/premierClient.c">premierClient.c :</a></strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/first_client/premierClient.c"> </a>premier binaire client.</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include "nbgenerator.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">main</span>(){
+    printf(<span style="background-color: #fff0f0">"Le nombre al&eacute;atoire est %d</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, getPseudoNumber(<span style="color: #0000DD;font-weight: bold">1500</span>));
+    <span style="color: #008800;font-weight: bold">return</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+}
+</pre>
+</div>
+<div class="wp-block-image">
+<figure class="aligncenter"><img src="http://www.linuxembedded.fr/wp-content/uploads/2019/10/first_library_version.png" alt="" class="wp-image-6972 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/10/first_library_version.png 1019w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/first_library_version-300x54.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/10/first_library_version-768x137.png 768w" sizes="(max-width: 1019px) 100vw, 1019px"></figure>
+</div>
+<h4>Exemple 2 : deuxi&egrave;me release de libnbgenerator.so.1.1.0</h4>
+<p>En plus des nombres pseudo-al&eacute;atoires, il est requis d&rsquo;avoir une interface pour la g&eacute;n&eacute;ration de chaines de caract&egrave;res contenant des mots de passe.<br />Cela peut se faire comme indiqu&eacute; :</p>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/second_client/nbgenerator.h">nbgenerator.h :</a></strong> header de la biblioth&egrave;que <strong>&laquo;&nbsp;libnbgenerator.so.1.1.0&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include &lt;stdlib.h&gt;</span>
+<span style="color: #557799">#include &lt;time.h&gt;</span>
+<span style="color: #557799">#include &lt;string.h&gt;</span>
+
+<span style="color: #557799">#define DEFAULT_MAX_NUMBER_LIMIT 1000</span>
+<span style="color: #557799">#define MAX_PASSWORD_LENGTH 20</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">getPseudoNumber</span>(<span style="color: #333399;font-weight: bold">int</span> numLimit);
+
+<span style="color: #888888">/* generationMotDePasse has a local symbol */</span>
+<span style="color: #333399;font-weight: bold">char</span> <span style="color: #333333">*</span><span style="color: #0066BB;font-weight: bold">generationMotDePasse</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters);
+
+<span style="color: #888888">/* generationMotDePasse has a global symbol (exported to client binary) */</span>
+<span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> <span style="color: #0066BB;font-weight: bold">getRandomPassword</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters);
+</pre>
+</div>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/second_client/nbgenerator.c">nbgenerator.c :</a></strong>  impl&eacute;mentation de la biblioth&egrave;que &laquo;&nbsp;<strong>libnbgenerator.so.1.1.0</strong>&nbsp;&raquo; :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "nbgenerator.h"</span>
+
+<span style="color: #333399;font-weight: bold">char</span> password[MAX_PASSWORD_LENGTH] <span style="color: #333333">=</span> {<span style="color: #0000DD;font-weight: bold">0</span>};
+<span style="color: #888888">// getPseudoNumber : exported to client binary</span>
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">getPseudoNumber</span>(<span style="color: #333399;font-weight: bold">int</span> numLimit){
+    <span style="color: #333399;font-weight: bold">int</span> rNumber <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+    srand(time(<span style="color: #007020">NULL</span>));
+    <span style="color: #008800;font-weight: bold">if</span>(numLimit <span style="color: #333333">&gt;</span> <span style="color: #0000DD;font-weight: bold">0</span>)
+        rNumber <span style="color: #333333">=</span> rand() <span style="color: #333333">%</span> numLimit;
+    <span style="color: #008800;font-weight: bold">else</span>
+        rNumber <span style="color: #333333">=</span> rand() <span style="color: #333333">%</span> DEFAULT_MAX_NUMBER_LIMIT;
+    <span style="color: #008800;font-weight: bold">return</span> rNumber;
+}
+<span style="color: #888888">// generationMotDePasse : not exported to client binary</span>
+<span style="color: #333399;font-weight: bold">char</span> <span style="color: #333333">*</span><span style="color: #0066BB;font-weight: bold">generationMotDePasse</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters){
+    <span style="color: #333399;font-weight: bold">short</span> i <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+    memset(password, <span style="color: #0000DD;font-weight: bold">0</span>, MAX_PASSWORD_LENGTH);
+    
+    srand(time(<span style="color: #007020">NULL</span>));
+    
+    <span style="color: #008800;font-weight: bold">if</span>((nbCharacters <span style="color: #333333">&gt;</span> MAX_PASSWORD_LENGTH) <span style="color: #333333">||</span> (nbCharacters <span style="color: #333333">&lt;=</span> <span style="color: #0000DD;font-weight: bold">0</span>))
+        nbCharacters <span style="color: #333333">=</span> MAX_PASSWORD_LENGTH;
+    <span style="color: #888888">/* G&eacute;n&eacute;ration du mot de passe */</span>
+    <span style="color: #008800;font-weight: bold">for</span>(i <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>; i<span style="color: #333333">&lt;</span> nbCharacters; i<span style="color: #333333">++</span>){
+        password[i] <span style="color: #333333">=</span> <span style="color: #0044DD">'A'</span> <span style="color: #333333">+</span> (rand() <span style="color: #333333">%</span> nbCharacters);
+    }
+    <span style="color: #008800;font-weight: bold">return</span> password;
+}
+<span style="color: #888888">// getRandomPassword : exported to client binary</span>
+<span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> <span style="color: #0066BB;font-weight: bold">getRandomPassword</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters){
+    <span style="color: #008800;font-weight: bold">return</span> generationMotDePasse(nbCharacters);
+}
+</pre>
+</div>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/second_client/script_version">script_version :</a></strong> Seules 2 des 3 fonctions seront export&eacute;es vers le binaire du client (<strong><em>getPseudoNumber()</em></strong><em> et </em><strong><em>getRandomPassword()</em></strong>) .</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%">NBGENERATOR_1.0<span style="color: #333333">{</span>
+    <span style="color: #007020">global</span>:
+        getPseudoNumber;
+    <span style="color: #007020">local</span>:
+        *;
+<span style="color: #333333">}</span>;
+
+NBGENERATOR_1.1<span style="color: #333333">{</span>
+    <span style="color: #007020">global</span>:
+        getRandomPassword;
+    <span style="color: #007020">local</span>:
+        *;
+<span style="color: #333333">}</span>;
+</pre>
+</div>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/second_client/dexiemeClient.c">deuxiemeClient.c :</a></strong> deuxi&egrave;me version du binaire du client</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include "nbgenerator.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">main</span>(){
+    printf(<span style="background-color: #fff0f0">"Le nombre al&eacute;atoire est %d</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, getPseudoNumber(<span style="color: #0000DD;font-weight: bold">1500</span>));
+    printf(<span style="background-color: #fff0f0">"Le mot de passe : %s</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, getRandomPassword(<span style="color: #0000DD;font-weight: bold">10</span>));
+    <span style="color: #008800;font-weight: bold">return</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+}
+</pre>
+</div>
+<p>la compilation se fait comme indiqu&eacute; ci dessous :</p>
+<figure class="wp-block-image"><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/linker_script_dynamic_library.png" alt="" class="wp-image-7057 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/linker_script_dynamic_library.png 836w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/linker_script_dynamic_library-300x120.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/linker_script_dynamic_library-768x308.png 768w" sizes="(max-width: 836px) 100vw, 836px"></figure>
+<p>Il est temps de tester l&rsquo;ancien programme sans le recompiler :</p>
+<ul class="wp-block-gallery columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/symbol_method_name_back_compatible.png" alt="" data-id="7058" data-link="https://www.linuxembedded.fr/?attachment_id=7058" class="wp-image-7058 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/symbol_method_name_back_compatible.png 838w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/symbol_method_name_back_compatible-300x40.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/symbol_method_name_back_compatible-768x103.png 768w" sizes="(max-width: 838px) 100vw, 838px"></figure>
+</li>
+</ul>
+<h4>Exemple 3 : troisi&egrave;me release de libnbgenerator.so.2.0.0</h4>
+<p>Il arrive parfois que la d&eacute;finition des interfaces soit modifi&eacute;e (<em>on dit souvent une alt&eacute;ration de l&rsquo;ABI</em>). Sans la m&eacute;thode &laquo;&nbsp;<strong>gestion de symboles</strong>&laquo;&nbsp;, ce genre de changement garantit de casser la r&eacute;tro-compatibilit&eacute; (<em>c&rsquo;est le cas d&rsquo;une fonction qui ne retourne plus le m&ecirc;me type ou pire encore, une interface qui doit &ecirc;tre retir&eacute;e de l&rsquo;usage dans les nouveaux binaire</em>s).</p>
+<p>Dans le cas de notre biblioth&egrave;que, on se retrouve vite limit&eacute; par la fonction <strong>getRandomPassword</strong>() qui doit retourner en plus du mot de passe en clair, le <strong>mot de passe hash&eacute;</strong> et la <strong>fonction de hash</strong>. </p>
+<p style="text-align:center">La question qui se pose est comment faire compiler le code suivant :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #888888">// Ancien binaire</span>
+<span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> <span style="color: #0066BB;font-weight: bold">getRandomPassword</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters);
+
+<span style="color: #888888">// Nouveau binaire</span>
+<span style="color: #008800;font-weight: bold">struct</span> PasswordHash <span style="color: #0066BB;font-weight: bold">getRandomPassword</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters);
+</pre>
+</div>
+<p>La r&eacute;ponse est la suivante :</p>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/third_client/nbgenerator.h">nbgenerator.h :</a></strong> header de la biblioth&egrave;que <strong>&laquo;&nbsp;libnbgenerator.so.2.0.0&nbsp;&raquo;</strong> :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include &lt;stdlib.h&gt;</span>
+<span style="color: #557799">#include &lt;time.h&gt;</span>
+<span style="color: #557799">#include &lt;string.h&gt;</span>
+<span style="color: #557799">#define _XOPEN_SOURCE</span>
+<span style="color: #557799">#include &lt;unistd.h&gt;</span>
+<span style="color: #557799">#include &lt;crypt.h&gt;</span>
+
+<span style="color: #557799">#define DEFAULT_MAX_NUMBER_LIMIT 1000</span>
+<span style="color: #557799">#define MAX_PASSWORD_LENGTH 20</span>
+<span style="color: #557799">#define ENCRYPTION_CIPHER_METHOD "crypt"</span>
+
+<span style="color: #008800;font-weight: bold">struct</span> PasswordHash{
+    <span style="color: #333399;font-weight: bold">char</span> hashNameFunc[<span style="color: #0000DD;font-weight: bold">20</span>];
+    <span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> passwordToHash;
+    <span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> hashedPassword;
+} passHash;
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">getPseudoNumber</span>(<span style="color: #333399;font-weight: bold">int</span> numLimit);
+<span style="color: #333399;font-weight: bold">char</span> <span style="color: #333333">*</span><span style="color: #0066BB;font-weight: bold">generationMotDePasse</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters);
+
+<span style="color: #888888">/* LIB_NBGENERATOR_VERSION_2_0 : Constant to be passed at compilation time */</span>
+<span style="color: #888888">/* Because only one header is allowed in case of same function signature */</span>
+<span style="color: #557799">#ifdef LIB_NBGENERATOR_VERSION_2_0</span>
+<span style="color: #008800;font-weight: bold">struct</span> PasswordHash <span style="color: #0066BB;font-weight: bold">getRandomPassword</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters);
+<span style="color: #557799">#else</span>
+<span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> <span style="color: #0066BB;font-weight: bold">getRandomPassword</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters);
+<span style="color: #557799">#endif</span>
+</pre>
+</div>
+<p><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/third_client/nbgenerator.c">nbgenerator.c :</a> impl&eacute;mentation de la biblioth&egrave;que &laquo;&nbsp;<strong>libnbgenerator.so.2.0.0</strong>&nbsp;&raquo; :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include "nbgenerator.h"</span>
+
+<span style="color: #333399;font-weight: bold">char</span> password[MAX_PASSWORD_LENGTH] <span style="color: #333333">=</span> {<span style="color: #0000DD;font-weight: bold">0</span>};
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">getPseudoNumber</span>(<span style="color: #333399;font-weight: bold">int</span> numLimit){
+    <span style="color: #333399;font-weight: bold">int</span> rNumber <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+    srand(time(<span style="color: #007020">NULL</span>));
+    <span style="color: #008800;font-weight: bold">if</span>(numLimit <span style="color: #333333">&gt;</span> <span style="color: #0000DD;font-weight: bold">0</span>)
+        rNumber <span style="color: #333333">=</span> rand() <span style="color: #333333">%</span> numLimit;
+    <span style="color: #008800;font-weight: bold">else</span>
+        rNumber <span style="color: #333333">=</span> rand() <span style="color: #333333">%</span> DEFAULT_MAX_NUMBER_LIMIT;
+    <span style="color: #008800;font-weight: bold">return</span> rNumber;
+}
+
+<span style="color: #888888">// generationMotDePasse : not exported to client binary</span>
+<span style="color: #333399;font-weight: bold">char</span> <span style="color: #333333">*</span><span style="color: #0066BB;font-weight: bold">generationMotDePasse</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters){
+    <span style="color: #333399;font-weight: bold">short</span> i <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+    memset(password, <span style="color: #0000DD;font-weight: bold">0</span>, MAX_PASSWORD_LENGTH);
+    
+    srand(time(<span style="color: #007020">NULL</span>));
+    
+    <span style="color: #008800;font-weight: bold">if</span>((nbCharacters <span style="color: #333333">&gt;</span> MAX_PASSWORD_LENGTH) <span style="color: #333333">||</span> (nbCharacters <span style="color: #333333">&lt;=</span> <span style="color: #0000DD;font-weight: bold">0</span>))
+        nbCharacters <span style="color: #333333">=</span> MAX_PASSWORD_LENGTH;
+    <span style="color: #888888">/* G&eacute;n&eacute;ration du mot de passe */</span>
+    <span style="color: #008800;font-weight: bold">for</span>(i <span style="color: #333333">=</span> <span style="color: #0000DD;font-weight: bold">0</span>; i<span style="color: #333333">&lt;</span> nbCharacters; i<span style="color: #333333">++</span>){
+        password[i] <span style="color: #333333">=</span> <span style="color: #0044DD">'A'</span> <span style="color: #333333">+</span> (rand() <span style="color: #333333">%</span> nbCharacters);
+    }
+    <span style="color: #008800;font-weight: bold">return</span> password;
+}
+
+<span style="color: #888888">/* @ means use this for legacy (old binaries) */</span>
+__asm__(<span style="background-color: #fff0f0">".symver getRandomPassword_1_1,getRandomPassword@NBGENERATOR_1.1"</span>);
+<span style="color: #333399;font-weight: bold">char</span><span style="color: #333333">*</span> <span style="color: #0066BB;font-weight: bold">getRandomPassword_1_1</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters){
+    <span style="color: #008800;font-weight: bold">return</span> generationMotDePasse(nbCharacters);
+}
+
+<span style="color: #888888">/* @@ means default use this for new binaries */</span>
+__asm__(<span style="background-color: #fff0f0">".symver getRandomPassword_2_0,getRandomPassword@@NBGENERATOR_2.0"</span>);
+<span style="color: #008800;font-weight: bold">struct</span> PasswordHash <span style="color: #0066BB;font-weight: bold">getRandomPassword_2_0</span>(<span style="color: #333399;font-weight: bold">int</span> nbCharacters){
+    <span style="color: #333399;font-weight: bold">char</span> passwordToHash[MAX_PASSWORD_LENGTH];
+    <span style="color: #333399;font-weight: bold">char</span> passwordSalt[<span style="color: #0000DD;font-weight: bold">6</span>];
+    
+    strcpy(passwordToHash, generationMotDePasse(<span style="color: #0000DD;font-weight: bold">10</span>));
+    
+    <span style="color: #888888">// $1$ allows to select md5 hashing algorithm    </span>
+    sprintf(passwordSalt, <span style="background-color: #fff0f0">"$6$%s"</span>, generationMotDePasse(<span style="color: #0000DD;font-weight: bold">6</span>));
+
+    sprintf(passHash.hashNameFunc, <span style="background-color: #fff0f0">"%s"</span>, ENCRYPTION_CIPHER_METHOD);
+    
+    <span style="color: #888888">/* Crypt returns a hash based on DES encryption */</span>
+    passHash.hashedPassword <span style="color: #333333">=</span> crypt(passwordToHash, passwordSalt);
+
+    <span style="color: #008800;font-weight: bold">return</span> passHash;
+}
+</pre>
+</div>
+<p>Le code n&eacute;cessite quelques petites remarques :</p>
+<ul>
+<li>Les deux fonctions getRandomPassword doivent &ecirc;tre d&eacute;clar&eacute;es avec des noms diff&eacute;rents (<em>par exemple </em><strong><em>getRandomPassword_1_1</em></strong><em>() pour la fonction </em><strong><em>getRandomPassword()</em></strong><em> associ&eacute;e au symbole </em><strong><em>NBGENERATOR_1.1</em></strong>). La directive symver est employ&eacute;e pour faire le mapping.</li>
+<li> Le symbole @ se traduit par : appliquer cette r&eacute;gle &agrave; tout ancien binaire contrairement au @@ qui force le linker &agrave; utiliser cette fonction avec tous les nouveaux binaires qui seront compil&eacute;s ult&eacute;rieurement.</li>
+</ul>
+<p><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/third_client/script_version">script_version :</a> Il nous faut juste ins&eacute;rer le tag NBGENERATOR_2.0 dans le linker script :</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%">NBGENERATOR_1.0<span style="color: #333333">{</span>
+    <span style="color: #007020">global</span>:
+        getPseudoNumber;
+    <span style="color: #007020">local</span>:
+        *;
+<span style="color: #333333">}</span>;
+
+NBGENERATOR_1.1<span style="color: #333333">{</span>
+    <span style="color: #007020">global</span>:
+        getRandomPassword;
+    <span style="color: #007020">local</span>:
+        *;
+<span style="color: #333333">}</span>;
+
+NBGENERATOR_2.0<span style="color: #333333">{</span>
+    <span style="color: #007020">global</span>:
+        getRandomPassword;
+    <span style="color: #007020">local</span>:
+        *;
+<span style="color: #333333">}</span>;
+</pre>
+</div>
+<p>Et enfin, la derni&egrave;re pi&egrave;ce de puzzle qui permet de tester notre biblioth&egrave;que, le troisi&egrave;me client :</p>
+<p><strong><a href="https://github.com/jugurthab/linux_embedded_articles/blob/master/library-versioning/symbol_versioning_method/third_client/troisiemeClient.c">troisiemeClient.c :</a></strong> troisi&egrave;me binaire client.</p>
+<div style="background: #ffffff;overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em">
+<pre style="margin: 0;line-height: 125%"><span style="color: #557799">#include &lt;stdio.h&gt;</span>
+<span style="color: #557799">#include "nbgenerator.h"</span>
+
+<span style="color: #333399;font-weight: bold">int</span> <span style="color: #0066BB;font-weight: bold">main</span>(){
+    <span style="color: #008800;font-weight: bold">struct</span> PasswordHash pass <span style="color: #333333">=</span> getRandomPassword(<span style="color: #0000DD;font-weight: bold">10</span>);
+    printf(<span style="background-color: #fff0f0">"Le nombre al&eacute;atoire est %d</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>, getPseudoNumber(<span style="color: #0000DD;font-weight: bold">1500</span>));
+    printf(<span style="background-color: #fff0f0">"Le mot de passe avec hash : %s avec la fonction =&gt; %s</span><span style="color: #666666;font-weight: bold;background-color: #fff0f0">n</span><span style="background-color: #fff0f0">"</span>,
+            pass.hashedPassword, pass.hashNameFunc);
+
+    <span style="color: #008800;font-weight: bold">return</span> <span style="color: #0000DD;font-weight: bold">0</span>;
+}
+</pre>
+</div>
+<p>Il est temps d&rsquo;ex&eacute;cuter et compiler notre programme :</p>
+<ul class="wp-block-gallery aligncenter columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/library_symver_compiling.png" alt="" data-id="7091" data-link="https://www.linuxembedded.fr/?attachment_id=7091" class="wp-image-7091 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/library_symver_compiling.png 787w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/library_symver_compiling-300x116.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/library_symver_compiling-768x296.png 768w" sizes="(max-width: 787px) 100vw, 787px"></figure>
+</li>
+</ul>
+<p>Pour finir, voici l&rsquo;ex&eacute;cution des trois programmes qui d&eacute;pendent d&eacute;sormais de <strong>libnbgenerator.2.0.0</strong> :</p>
+<ul class="wp-block-gallery columns-1 is-cropped">
+<li class="blocks-gallery-item">
+<figure><img src="https://www.linuxembedded.fr/wp-content/uploads/2019/11/all_lib_compilation_works.png" alt="" data-id="7092" data-link="https://www.linuxembedded.fr/?attachment_id=7092" class="wp-image-7092 img-fluid" srcset="https://www.linuxembedded.fr/wp-content/uploads/2019/11/all_lib_compilation_works.png 789w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/all_lib_compilation_works-300x71.png 300w, https://www.linuxembedded.fr/wp-content/uploads/2019/11/all_lib_compilation_works-768x182.png 768w" sizes="(max-width: 789px) 100vw, 789px"></figure>
+</li>
+</ul>
+<p style="text-align:center"><strong>Important</strong><br />Il est &agrave; noter que la m&eacute;thode &laquo;&nbsp;gestion de symbole&nbsp;&raquo; peut augmenter la taille de la biblioth&egrave;que g&eacute;n&eacute;r&eacute;e (<em>comme dans notre exemple avec la pr&eacute;sence des deux fonctions getRandomPassword()</em>), c&rsquo;est l&rsquo;une des raisons qui rend la glibc volumineuse. Cet inconv&eacute;nient est souvent n&eacute;glig&eacute; par rapport &agrave; ses nombreux avantages. </p>
+<h2>Conclusion</h2>
+<p>Dans cet article, nous avons d&eacute;couvert un concept avanc&eacute; de la gestion des biblioth&egrave;ques partag&eacute;es. Il est primordial de concevoir ses biblioth&egrave;ques avec l&rsquo;une de ces deux m&eacute;thodes : le lien type &laquo;&nbsp;soname&nbsp;&raquo; ou la gestion des symboles (<em>cette derni&egrave;re est &agrave; pr&eacute;coniser</em>).<br />Ces m&eacute;thodes permettent de maintenir et faire &eacute;voluer les biblioth&egrave;ques, d&rsquo;am&eacute;liorer le code et d&rsquo;apporter des corrections aux failles de s&eacute;curit&eacute; sans avoir &agrave; recompiler le binaire du client final (<em>c&rsquo;est la retro-compatibilit&eacute;</em>).</p>
+</div>
+]]></content:encoded>
+										</item>
+	</channel>
+</rss>
